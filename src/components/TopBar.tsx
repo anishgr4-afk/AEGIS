@@ -1,28 +1,36 @@
-const NAV = ['Dashboard', 'Body', 'Trends', 'Earth link', 'Log'];
+const NAV = [
+  ['Dashboard', '#dashboard'],
+  ['Body', '#vitals'],
+  ['Trends', '#protocols'],
+  ['Earth link', '#earth-link'],
+  ['Log', '#audit-log'],
+];
 
-export function TopBar() {
+export function TopBar({ day, environment, simulated, onSimulationChange }: {
+  day: number;
+  environment: string;
+  simulated: boolean;
+  onSimulationChange: (enabled: boolean) => void;
+}) {
   return (
     <header className="panel topbar">
       <div className="topbar-left">
-        <div className="brand">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5CC8FF" strokeWidth="2" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" /><path d="M7.5 12l3 3 6-6" />
-          </svg>
-          <span>CHECKPOINT</span>
-        </div>
+        <a className="brand" href="#dashboard" aria-label="Checkpoint dashboard">
+          <span className="brand-check" aria-hidden="true">✓</span><span>CHECKPOINT</span>
+        </a>
         <nav className="nav" aria-label="Console">
-          {NAV.map((n, i) => (
-            <a key={n} href="#" aria-current={i === 0 ? 'page' : undefined}>{n}</a>
-          ))}
+          {NAV.map(([label, href], index) => <a key={label} href={href} aria-current={index === 0 ? 'page' : undefined}>{label}</a>)}
         </nav>
       </div>
       <div className="topbar-right">
-        <span>DAY 34 · MARS TRANSIT</span>
-        <span>MET <em>034:07:42:16</em></span>
-        <span className="tag">SIMULATED DATA</span>
+        <span>DAY {day} · {environment.toUpperCase()}</span>
+        <span>MET <em>{String(day).padStart(3, '0')}:00:00:00</em></span>
+        <button className={`sim-toggle${simulated ? ' is-on' : ''}`} type="button" aria-pressed={simulated} onClick={() => onSimulationChange(!simulated)}>
+          <span className="toggle-dot" /> SIMULATED DATA
+        </button>
         <span className="user">
-          <span className="user-name"><b>Alex Rivera</b><small>Mission Specialist</small></span>
-          <span className="avatar">AR</span>
+          <span className="user-name"><b>Alex Vance</b><small>Commander</small></span>
+          <span className="avatar">AV</span>
         </span>
       </div>
     </header>

@@ -14,17 +14,31 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
-from flask import Flask, jsonify, make_response, render_template, request, send_file
+from flask import Flask, jsonify, make_response, render_template, request, send_from_directory
 from flask_cors import CORS
 
+from clinical import (
+    SCENARIOS,
+    SYMPTOM_IDS,
+    add_audit_event,
+    default_clinical_state,
+    evaluate_vitals,
+    local_pdf_sources,
+    validate_symptoms,
+    validate_vitals,
+)
 from generate_data import generate_history
 
 ROOT = Path(__file__).resolve().parent
 DATA_FILE = ROOT / "data" / "mission_data.json"
+CLINICAL_FILE = ROOT / "data" / "clinical_state.json"
+PROTOCOL_FILE = ROOT / "data" / "medical_database.json"
+DIST_DIR = ROOT / "dist"
 app = Flask(__name__, template_folder=str(ROOT / "templates"))
 CORS(app)
 lock = RLock()
 history: list[dict[str, Any]] = []
+clinical_state: dict[str, Any] = {}
 active_environment = "MARS_TRANSIT"
 action_log: list[dict[str, str]] = []
 ENVIRONMENTS = {
@@ -174,15 +188,125 @@ def apply_inputs(payload: dict) -> dict:
 
 @app.get("/")
 def index():
-    if (ROOT / "templates" / "index.html").is_file():
-        return render_template("index.html")
-    return make_response("Frontend file not found. Place it at templates/index.html. API is available under /api/.", 404)
+    built_index = DIST_DIR / "index.html"
+    if built_index.is_file():
+        return send_from_directory(DIST_DIR, "index.html")
+    return render_template("index.html")
 
 
-@app.get("/assets/body.png")
-def body_illustration():
-    """Serve the canonical UI illustration from the Vite source tree."""
-    return send_file(ROOT / "src" / "assets" / "body.png", mimetype="image/png", conditional=True)
+@app.get("/assets/<path:filename>")
+def frontend_asset(filename: str):
+    """Serve built Vite assets, with the source body image as a fallback."""
+    asset_dir = DIST_DIR / "assets"
+    if (asset_dir / filename).is_file():
+        return send_from_directory(asset_dir, filename)
+    if filename == "body.png":
+        return send_from_directory(ROOT / "src" / "assets", filename, mimetype="image/png")
+    return jsonify({"error": "asset not found"}), 404
+
+
+@app.get("/api/clinical/state")
+def get_clinical_state():
+    return jsonify(clinical_state)
+
+
+@app.post("/api/clinical/evaluate")
+def evaluate_clinical_input():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Request body must be a JSON object"}), 400
+    try:
+        values = validate_vitals(payload.get("vitals"))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(evaluate_vitals(values))
+
+
+@app.get("/api/clinical/catalog")
+def get_clinical_catalog():
+    with PROTOCOL_FILE.open(encoding="utf-8") as stream:
+        catalog = json.load(stream)
+    catalog["available_source_files"] = local_pdf_sources(ROOT)
+    catalog["source_documents_available"] = bool(catalog.get("sources"))
+    return jsonify(catalog)
+
+
+def persist_clinical_state() -> None:
+    CLINICAL_FILE.parent.mkdir(parents=True, exist_ok=True)
+    temporary = CLINICAL_FILE.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(clinical_state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    temporary.replace(CLINICAL_FILE)
+
+
+def mission_start_date() -> str:
+    return str(history[0]["date"])
+
+
+@app.post("/api/clinical/vitals")
+def update_clinical_vitals():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Request body must be a JSON object"}), 400
+    with lock:
+        try:
+            values = validate_vitals(payload.get("vitals"))
+            symptoms = validate_symptoms(payload.get("symptoms", clinical_state.get("symptoms", [])))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        clinical_state.update(vitals=values, symptoms=symptoms, scenario="manual_entry", triage=evaluate_vitals(values))
+        add_audit_event(clinical_state, mission_start_date(), "vitals_logged", f"Manual readings recorded; triage={clinical_state['triage']['urgency']}")
+        persist_clinical_state()
+        return jsonify(clinical_state)
+
+
+@app.post("/api/clinical/symptoms")
+def update_clinical_symptoms():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Request body must be a JSON object"}), 400
+    try:
+        symptoms = validate_symptoms(payload.get("symptoms"))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    with lock:
+        clinical_state["symptoms"] = symptoms
+        add_audit_event(clinical_state, mission_start_date(), "symptoms_checked", f"Reported symptoms: {', '.join(symptoms) or 'none'}")
+        persist_clinical_state()
+        return jsonify(clinical_state)
+
+
+@app.post("/api/clinical/scenario/<scenario_name>")
+def clinical_scenario(scenario_name: str):
+    if scenario_name not in SCENARIOS:
+        return jsonify({"error": f"scenario_name must be one of: {', '.join(SCENARIOS)}"}), 404
+    with lock:
+        preset = SCENARIOS[scenario_name]
+        values = validate_vitals(preset["vitals"])
+        symptoms = validate_symptoms(preset["symptoms"])
+        clinical_state.update(vitals=values, symptoms=symptoms, scenario=scenario_name, triage=evaluate_vitals(values))
+        add_audit_event(clinical_state, mission_start_date(), "scenario_loaded", f"{preset['label']} (simulated pattern; not a diagnosis)")
+        persist_clinical_state()
+        return jsonify(clinical_state)
+
+
+@app.post("/api/clinical/audit")
+def add_clinical_audit_event():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Request body must be a JSON object"}), 400
+    event_type, detail = payload.get("type"), payload.get("detail")
+    allowed = {"symptoms_checked", "checklist_step", "medication_reported"}
+    if event_type not in allowed or not isinstance(detail, str) or not detail.strip():
+        return jsonify({"error": "Provide a supported event type and non-empty detail"}), 400
+    if event_type == "checklist_step":
+        with PROTOCOL_FILE.open(encoding="utf-8") as stream:
+            catalog = json.load(stream)
+        if not any(step.get("id") == payload.get("step_id") for protocol in catalog.get("protocols", []) for step in protocol.get("steps", [])):
+            return jsonify({"error": "Checklist step is not present in the locally sourced protocol catalog"}), 400
+    with lock:
+        add_audit_event(clinical_state, mission_start_date(), event_type, detail.strip())
+        persist_clinical_state()
+        return jsonify(clinical_state)
 
 
 @app.get("/api/history")
@@ -287,9 +411,11 @@ def flight_surgeon_packet():
         f"RAD={m['radiation_msv']['value']:.1f}mSv RATE={m['radiation_msv']['daily_rate']:.1f}mSv/d",
         f"BONE={m['bone_density_pct']['value']:.1f}% MUSCLE={m['muscle_strength_pct']['value']:.1f}% MII={m['mii_score']['value']:.1f}% VO2={m['vo2_max']['value']:.1f}",
         f"HR={v['heart_rate_bpm']['value']} BP={v['blood_pressure']['value']} TEMP={v['body_temp_c']['value']} SPO2={v['spo2_pct']['value']} SLEEP={v['sleep_hours']['value']} MOOD={v['mood_score']['value']}",
+        f"CLINICAL_TRIAGE={clinical_state['triage']['urgency'].upper()} FLAGS=" + (",".join(flag["id"] for flag in clinical_state["triage"]["flags"]) or "NONE"),
+        "RECENT_MET=" + ";".join(f"{event['met']}:{event['type']}" for event in clinical_state.get("audit", [])[-3:]),
         "ANOMALY=" + (",".join(anomalies) if anomalies else "NONE"),
         "ACTION=" + (day.get("action_cards", [day["alerts"][0]["action"]])[0]),
-        "REF=NASA-STD-3001 V1 7002 | SIMULATION ONLY",
+        "REF=PROJECT DEMO THRESHOLDS | SIMULATION ONLY",
     ])
     response = make_response(text, 200)
     response.headers["Content-Type"] = "text/plain; charset=utf-8"
@@ -299,6 +425,15 @@ def flight_surgeon_packet():
 
 with lock:
     history = load_history()
+    if CLINICAL_FILE.is_file():
+        with CLINICAL_FILE.open(encoding="utf-8") as stream:
+            clinical_state = json.load(stream)
+        clinical_state["vitals"] = validate_vitals(clinical_state.get("vitals"))
+        clinical_state["symptoms"] = validate_symptoms(clinical_state.get("symptoms", []))
+        clinical_state["triage"] = evaluate_vitals(clinical_state["vitals"])
+        clinical_state.setdefault("audit", [])
+    else:
+        clinical_state = default_clinical_state(history[-1])
 
 
 if __name__ == "__main__":

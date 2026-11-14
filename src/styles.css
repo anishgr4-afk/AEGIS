@@ -213,3 +213,104 @@ button { font-family: inherit; }
   .tw, .hotspot .ping { animation: none; }
   .scan { animation: none; opacity: 0; }
 }
+
+/* ---------- locally hosted clinical triage console ---------- */
+html, body, #root { min-height: 100%; height: auto; }
+body { overflow-x: hidden; }
+.console-app { width: 100%; min-height: 100vh; height: auto; overflow: clip; }
+.console-app .stars { position: fixed; z-index: 0; }
+.console-shell { position: relative; z-index: 1; width: min(1920px, 100%); margin: 0 auto; padding: 14px 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.console-shell .topbar { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 8px 14px; }
+.console-shell .topbar-left, .console-shell .topbar-right { display: flex; align-items: center; gap: 16px; }
+.console-shell .topbar-right { font-family: var(--font-mono); font-size: 11px; color: var(--text-soft); }
+.console-shell .earthlink { min-height: 70px; display: grid; grid-template-columns: auto minmax(120px, 1fr) auto auto auto minmax(120px, .55fr); gap: 16px; align-items: center; padding: 10px 14px; }
+.console-shell .earthlink .stat { display: flex; flex-direction: column; gap: 4px; white-space: nowrap; }
+.console-shell .earthlink .stat small, .earth-label { color: var(--muted); font: 600 10px var(--font-mono); letter-spacing: .1em; }
+.console-shell .earthlink .stat .display { font-size: 14px; }
+.triage-grid { display: grid; grid-template-columns: minmax(260px, .78fr) minmax(440px, 1.35fr) minmax(290px, .86fr); gap: 12px; align-items: start; }
+.vitals-console, .triage-console, .right-rail { padding: 16px; }
+.vitals-console, .triage-console { display: flex; flex-direction: column; gap: 14px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.section-head h1 { margin: 4px 0 0; font: 600 21px var(--font-display); }
+.section-head h2 { margin: 0; font: 600 16px var(--font-display); }
+.section-head.compact { align-items: baseline; }
+.section-head.compact > span, .source-count { color: var(--muted); font: 10px var(--font-mono); letter-spacing: .08em; text-align: right; }
+.eyebrow { color: var(--muted); font: 600 10px var(--font-mono); letter-spacing: .12em; }
+.urgency { padding: 6px 9px; border-radius: 999px; font: 700 10px var(--font-mono); letter-spacing: .08em; }
+.urgency--routine { color: var(--ok); background: rgba(52,211,153,.12); }
+.urgency--watch { color: var(--watch); background: rgba(251,191,36,.12); }
+.urgency--act { color: var(--act); background: rgba(248,113,113,.14); }
+.vital-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.input-card { min-width: 0; display: flex; flex-direction: column; gap: 7px; padding: 10px; border: 1px solid var(--panel-line); background: var(--inset); border-radius: 10px; color: var(--text-soft); font-size: 11px; }
+.input-card > div { display: flex; align-items: baseline; gap: 5px; }
+.input-card input, .med-record input, .protocol-tools > input { min-width: 0; width: 100%; color: var(--text); background: rgba(0,0,0,.28); border: 1px solid var(--panel-line); border-radius: 7px; padding: 8px; font: 600 18px var(--font-display); }
+.input-card small { color: var(--muted); font-size: 10px; }
+.input-card .input-hint { margin-top: -4px; }
+.flag-list { display: flex; flex-direction: column; gap: 6px; }
+.triage-flag, .rail-flag { display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; border-radius: 8px; font-size: 11px; }
+.triage-flag small, .rail-flag span { color: var(--text-soft); font-size: 10px; }
+.triage-flag--watch, .rail-flag--watch { background: var(--watch-bg); border: 1px solid var(--watch-line); color: var(--watch); }
+.triage-flag--act, .rail-flag--act { background: var(--act-bg); border: 1px solid var(--act-line); color: var(--act); }
+.routine-note, .muted { color: var(--muted); font-size: 11px; }
+.primary-button, .scenario-buttons button, .protocol-tools button, .symptom-pills button, .med-record button { color: var(--text); background: var(--inset); border: 1px solid var(--panel-line); border-radius: 8px; padding: 8px 10px; cursor: pointer; font: 600 11px var(--font-body); }
+.primary-button { min-height: 42px; background: rgba(92,200,255,.14); border-color: rgba(92,200,255,.42); color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.scenario-picker { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--panel-line); padding-top: 12px; }
+.scenario-picker > small { color: var(--watch); font-size: 10px; }
+.scenario-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.medical-note, .catalog-note { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.safety-banner { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--watch-line); border-radius: 9px; background: var(--watch-bg); color: var(--watch-text); font-size: 11px; line-height: 1.45; }
+.safety-banner b { flex: none; color: var(--watch); font: 700 10px var(--font-mono); }
+.symptom-label { color: var(--text-soft); font-size: 12px; }
+.symptom-pills, .region-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.symptom-pills button[aria-pressed='true'], .region-tabs button.active { border-color: var(--accent); background: rgba(92,200,255,.14); color: #b5e9ff; }
+.protocol-tools { display: flex; flex-direction: column; gap: 8px; }
+.protocol-tools > input { font: 12px var(--font-body); }
+.region-tabs button { padding: 6px 8px; font-size: 10px; }
+.source-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.source-summary > div { display: flex; flex-direction: column; gap: 4px; padding: 8px; background: var(--inset); border-radius: 7px; overflow-wrap: anywhere; }
+.source-summary b { color: var(--text-soft); font-size: 10px; }
+.source-summary span { color: var(--muted); font: 9px var(--font-mono); }
+.protocol-list { display: flex; flex-direction: column; gap: 6px; max-height: 54vh; overflow-y: auto; padding-right: 3px; }
+.protocol-card { border: 1px solid var(--panel-line); border-radius: 9px; background: rgba(5,10,20,.5); overflow: hidden; }
+.protocol-title { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px; border: 0; background: transparent; color: var(--text); cursor: pointer; text-align: left; }
+.protocol-title > span { display: flex; flex-direction: column; gap: 4px; }
+.protocol-title small { color: var(--muted); font: 9px var(--font-mono); }
+.protocol-title b { font-size: 12px; }
+.protocol-title em { flex: none; color: var(--watch); font: 700 8px var(--font-mono); font-style: normal; }
+.protocol-detail { padding: 0 10px 10px; }
+.unverified-label { color: var(--watch); font: 10px var(--font-mono); }
+.protocol-detail pre { max-height: 230px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-soft); font: 10px/1.5 var(--font-mono); background: rgba(0,0,0,.25); border-radius: 7px; padding: 9px; }
+.empty-approved { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.catalog-note { border-top: 1px solid var(--panel-line); padding-top: 9px; }
+.right-rail { display: flex; flex-direction: column; gap: 12px; }
+.next-action { padding: 13px; border-radius: 10px; border: 1px solid var(--panel-line); background: var(--inset); }
+.next-action--watch { border-color: var(--watch-line); }
+.next-action--act { border-color: var(--act-line); background: var(--act-bg); }
+.next-action h2 { margin: 8px 0; font: 600 17px var(--font-display); }
+.next-action p, .autonomy span { color: var(--text-soft); font-size: 11px; line-height: 1.45; }
+.autonomy { display: flex; flex-direction: column; gap: 5px; border-top: 1px solid var(--panel-line); padding-top: 9px; }
+.autonomy b { color: var(--accent); font: 600 9px var(--font-mono); }
+.rail-section { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--panel-line); padding-top: 11px; }
+.rail-section .section-head h2 { font-size: 14px; }
+.evidence-item { color: var(--watch-text); font-size: 10px; }
+.evidence-group-title { color: var(--muted); font: 9px var(--font-mono); letter-spacing: .04em; }
+.evidence-item summary { cursor: pointer; }
+.evidence-item p { color: var(--text-soft); line-height: 1.45; }
+.med-record > div { display: flex; gap: 6px; }
+.med-record input { font: 11px var(--font-body); }
+.med-record button { color: var(--accent); }
+.med-record > small { color: var(--muted); font-size: 9px; line-height: 1.4; }
+.mission-metric { display: flex; flex-direction: column; gap: 4px; padding: 9px; background: var(--inset); border-radius: 8px; }
+.mission-metric small { color: var(--muted); font: 9px var(--font-mono); }
+.mission-metric b { font: 600 16px var(--font-display); }
+.mission-metric span { color: var(--text-soft); font-size: 10px; }
+.audit-event { display: flex; flex-direction: column; gap: 3px; padding: 7px 8px; border-left: 2px solid rgba(92,200,255,.45); background: var(--inset); }
+.audit-event b { color: var(--accent); font: 9px var(--font-mono); text-transform: uppercase; }
+.audit-event span { color: var(--text-soft); font-size: 10px; line-height: 1.4; }
+.inline-error { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; border: 1px solid var(--act-line); border-radius: 8px; color: var(--act); background: var(--act-bg); font-size: 12px; }
+.inline-error button { border: 0; background: transparent; color: inherit; font-size: 18px; cursor: pointer; }
+.loading-card { padding: 24px; color: var(--muted); }
+.console-footer { padding: 4px 2px; text-align: center; color: var(--muted); font: 9px var(--font-mono); letter-spacing: .1em; }
+@media (max-width: 1120px) { .triage-grid { grid-template-columns: minmax(250px, .8fr) minmax(0, 1.2fr); } .right-rail { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } .console-shell .earthlink { grid-template-columns: auto 1fr auto auto; } .console-shell .earthlink .stat--report { display: none; } }
+@media (max-width: 720px) { .console-shell { padding: 8px; } .console-shell .topbar { align-items: flex-start; flex-direction: column; } .console-shell .topbar-left, .console-shell .topbar-right { flex-wrap: wrap; } .console-shell .nav { flex-wrap: wrap; } .console-shell .earthlink { grid-template-columns: 1fr 1fr; } .console-shell .earthlink .route { grid-column: 1 / -1; grid-row: 2; } .triage-grid, .right-rail { display: flex; flex-direction: column; } .vitals-console, .triage-console, .right-rail { width: 100%; } .source-summary { grid-template-columns: 1fr; } .protocol-list { max-height: 420px; } }

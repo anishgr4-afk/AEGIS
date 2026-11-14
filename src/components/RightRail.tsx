@@ -1,69 +1,41 @@
-import { SOLAR, STATUS_COLOR, type SolarLevel } from '../data';
-import { Sparkline, StatusPill } from './ui';
+import { useState } from 'react';
+import type { MissionSnapshot } from '../api';
+import type { ClinicalState, MedicalCatalog } from '../data';
 
-const BAR_COLORS = ['var(--ok)', 'var(--watch)', 'var(--act)'];
-const barColor = (i: number) => BAR_COLORS[i < 4 ? 0 : i < 8 ? 1 : 2];
+export function RightRail({ state, triage, catalog, mission, onAudit }: { state: ClinicalState; triage: ClinicalState['triage']; catalog: MedicalCatalog; mission: MissionSnapshot; onAudit: (type: string, detail: string) => void }) {
+  const [medication, setMedication] = useState('');
+  const next = triage.urgency === 'act' ? 'Escalate to the flight surgeon / CMO' : triage.urgency === 'watch' ? 'Recheck readings and review with CMO' : 'Continue routine monitoring';
+  const logMedication = () => { const value = medication.trim(); if (value) { onAudit('medication_reported', `Operator-reported medication: ${value}; no interaction check performed`); setMedication(''); } };
+  const warningEvidence = catalog.warnings_and_contraindications.slice(0, 4);
+  const medicationEvidence = catalog.medication_evidence.slice(0, 3);
+  const radiation = mission.space_metrics.radiation_msv;
+  const bone = mission.space_metrics.bone_density_pct;
+  const muscle = mission.space_metrics.muscle_strength_pct;
+  return <aside className="panel right-rail" aria-label="Triage summary and activity log">
+    <section className={`next-action next-action--${triage.urgency}`}>
+      <div className="eyebrow">NEXT STEP · DECISION SUPPORT</div><h2>{next}</h2>
+      <p>{triage.urgency === 'routine' ? 'No configured vital threshold is currently flagged.' : 'This is a demo alert. Recheck the measurement and use approved onboard procedures and crew medical authority.'}</p>
+      <div className="autonomy"><b>COMMUNICATIONS / AUTONOMY</b><span>Deep-space link delay is {Math.round(mission.comms_delay_seconds / 60)} min one way. No autonomous treatment or evacuation authorization rules are loaded.</span></div>
+    </section>
+    <section className="rail-section"><div className="section-head compact"><h2>Warnings & source evidence</h2><span>{state.triage.flags.length} ACTIVE</span></div>
+      {triage.flags.length ? triage.flags.map(flag => <div className={`rail-flag rail-flag--${flag.severity}`} key={flag.id}><b>{flag.severity.toUpperCase()} · {flag.label}</b><span>{flag.value} {flag.unit} — {flag.threshold}</span></div>) : <p className="muted">No threshold flags. Source cautions below remain unverified.</p>}
+      <b className="evidence-group-title">Warnings / contraindications · unverified</b>
+      {warningEvidence.map((item, index) => <details className="evidence-item" key={`warning-${item.source_id}-${item.page}-${index}`}><summary>PDF caution · p. {item.page}</summary><p>{item.excerpt}</p></details>)}
+      <b className="evidence-group-title">Medication mentions · unverified</b>
+      {medicationEvidence.map((item, index) => <details className="evidence-item" key={`medication-${item.source_id}-${item.page}-${index}`}><summary>PDF medication text · p. {item.page}</summary><p>{item.excerpt}</p></details>)}
+      {!warningEvidence.length && !medicationEvidence.length && <p className="muted">No warning or medication evidence lines were extracted.</p>}
+    </section>
+    <section className="rail-section med-record"><label className="eyebrow" htmlFor="medication-reported">OPERATOR MEDICATION NOTE</label><div><input id="medication-reported" value={medication} onChange={e => setMedication(e.target.value)} placeholder="Record only; no interaction check" /><button onClick={logMedication} disabled={!medication.trim()}>Log</button></div><small>Medication is recorded as entered. No prescribing or drug-interaction logic is enabled.</small></section>
+    <section className="rail-section mission-metrics"><div className="section-head compact"><h2>Mission health · Day {mission.day}</h2><span>{mission.environment}</span></div>
+      <Metric label="CUMULATIVE RADIATION" value={`${radiation.value.toFixed(1)} mSv`} detail={`${radiation.daily_rate.toFixed(1)} mSv/day · ${radiation.status.toUpperCase()}`} />
+      <Metric label="BONE / MUSCLE / MII" value={`${bone.value.toFixed(1)}% / ${muscle.value.toFixed(1)}% / ${mission.space_metrics.mii_score.value.toFixed(1)}%`} detail={`VO₂ max ${mission.space_metrics.vo2_max.value.toFixed(1)} ml/min/kg`} />
+    </section>
+    <section className="rail-section audit-log" id="audit-log"><div className="section-head compact"><h2>MET activity log</h2><span>{state.audit.length} EVENTS</span></div>
+      {state.audit.length ? [...state.audit].reverse().slice(0, 8).map((event, i) => <div className="audit-event" key={`${event.timestamp_utc}-${i}`}><b>MET {event.met} · {event.type.replace(/_/g, ' ')}</b><span>{event.detail}</span></div>) : <p className="muted">Vitals, symptoms, checklist actions, and operator medication notes will appear here.</p>}
+    </section>
+  </aside>;
+}
 
-export function RightRail({ solar }: { solar: SolarLevel }) {
-  const s = SOLAR[solar];
-  const storm = solar === 'storm';
-  const warnings = s.warning ? 3 : 2;
-
-  return (
-    <aside className="rail" aria-label="Next step, warnings and cabin">
-      <section className={`next-step${storm ? ' next-step--act' : ''}`}>
-        <div className="next-step-head">
-          <span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-            NEXT STEP
-          </span>
-          <span>~2 MIN</span>
-        </div>
-        <div className="next-step-body">
-          <div><span className="display">{s.nextTitle}</span><span>{s.nextWhy}</span></div>
-          <button type="button" className="btn btn--dark">Start</button>
-        </div>
-      </section>
-
-      <section className={`panel warnings ${storm ? 'panel--act' : 'panel--watch'}`}>
-        <div className="warnings-head">
-          <span style={{ color: storm ? 'var(--act)' : 'var(--watch)' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M12 3l9 16H3z" /><path d="M12 10v4M12 17h.01" /></svg>
-            WARNINGS · {warnings}
-          </span>
-          <button type="button" className="btn--ghost">Acknowledge</button>
-        </div>
-        {s.warning && (
-          <p className={`warning${storm ? ' warning--act' : ''}`} style={{ color: 'var(--text-soft)' }}>
-            <strong style={{ color: STATUS_COLOR[s.status] }}>{s.warning.title}.</strong> <span>{s.warning.text}</span>
-          </p>
-        )}
-        <p className="warning"><strong>Sleep low.</strong> 3 nights under 6 h.</p>
-        <p className="warning"><strong>Light low.</strong> Get morning light.</p>
-      </section>
-
-      <section className="panel metric">
-        <div className="eyebrow"><span>RADIATION</span><StatusPill status={s.radStatus} label={s.radLabel} /></div>
-        <div className="metric-line"><span className="display">{s.radToday}</span><span>mSv today</span></div>
-        <div className="metric-foot"><span>Mission total 15.9 mSv</span><span>38% of budget</span></div>
-        <div className="bar"><i style={{ width: '38%' }} /></div>
-      </section>
-
-      <section className="panel metric">
-        <div className="eyebrow"><span>CABIN CO₂</span><StatusPill status="ok" label="NORMAL" /></div>
-        <div className="metric-line"><span className="display">2.6</span><span>mmHg · limit 4.0</span></div>
-        <div className="spark">
-          <Sparkline viewBox="0 0 280 34" height={28} baseline={6} guide="#7f1d1d" points="0,20 40,19 80,21 120,17 160,18 200,16 240,19 280,18" />
-        </div>
-      </section>
-
-      <section className="panel metric">
-        <div className="eyebrow"><span>SOLAR ACTIVITY</span><StatusPill status={s.status} label={s.label} /></div>
-        <div className="headline">{s.line}</div>
-        <div className="solar-bars" aria-hidden="true">
-          {Array.from({ length: 12 }, (_, i) => <i key={i} style={i < s.level ? { background: barColor(i) } : undefined} />)}
-        </div>
-      </section>
-    </aside>
-  );
+function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return <div className="mission-metric"><small>{label}</small><b>{value}</b><span>{detail}</span></div>;
 }

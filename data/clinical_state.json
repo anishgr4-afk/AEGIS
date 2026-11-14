@@ -1,0 +1,79 @@
+{
+  "vitals": {
+    "body_temp_c": 37.6,
+    "spo2_pct": 98,
+    "heart_rate_bpm": 94,
+    "bp_systolic": 60,
+    "bp_diastolic": 78,
+    "respiratory_rate_bpm": 16
+  },
+  "symptoms": [],
+  "scenario": "nominal_transit",
+  "triage": {
+    "urgency": "act",
+    "flags": [
+      {
+        "id": "body_temp_c",
+        "label": "Body temperature",
+        "value": "37.6",
+        "unit": "°C",
+        "severity": "watch",
+        "threshold": "37.5–38.0 °C · supplied demo threshold"
+      },
+      {
+        "id": "heart_rate_bpm",
+        "label": "Heart rate",
+        "value": "94",
+        "unit": "bpm",
+        "severity": "watch",
+        "threshold": "89–100 bpm · supplied demo threshold"
+      },
+      {
+        "id": "blood_pressure",
+        "label": "Blood pressure",
+        "value": "60/78",
+        "unit": "mmHg",
+        "severity": "act",
+        "threshold": "< 90 systolic or < 55 diastolic"
+      }
+    ]
+  },
+  "audit": [
+    {
+      "timestamp_utc": "2026-11-14T22:09:08+00:00",
+      "met": "114:22:09:08",
+      "type": "symptoms_checked",
+      "detail": "Reported symptoms: fever_chills"
+    },
+    {
+      "timestamp_utc": "2026-11-14T22:09:10+00:00",
+      "met": "114:22:09:10",
+      "type": "symptoms_checked",
+      "detail": "Reported symptoms: fever_chills, nausea_vomiting"
+    },
+    {
+      "timestamp_utc": "2026-11-14T22:09:11+00:00",
+      "met": "114:22:09:11",
+      "type": "symptoms_checked",
+      "detail": "Reported symptoms: fever_chills, nausea_vomiting, shortness_breath"
+    },
+    {
+      "timestamp_utc": "2026-11-14T22:09:54+00:00",
+      "met": "114:22:09:54",
+      "type": "symptoms_checked",
+      "detail": "Reported symptoms: nausea_vomiting, shortness_breath"
+    },
+    {
+      "timestamp_utc": "2026-11-14T22:09:56+00:00",
+      "met": "114:22:09:56",
+      "type": "symptoms_checked",
+      "detail": "Reported symptoms: shortness_breath"
+    },
+    {
+      "timestamp_utc": "2026-11-14T22:09:56+00:00",
+      "met": "114:22:09:56",
+      "type": "symptoms_checked",
+      "detail": "Reported symptoms: none"
+    }
+  ]
+}
