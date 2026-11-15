@@ -1,0 +1,10 @@
+{
+  "_README": "Crew roster for the wearable feed and the Lifeline page. Names are fictional (from Lifeline_Emergency.html). 'default' receives readings that carry no crew id, and is the wearer the older single-astronaut endpoints show.",
+  "default": "MS2",
+  "crew": [
+    {"id": "CDR", "role": "CDR", "name": "A. Okafor"},
+    {"id": "PLT", "role": "PLT", "name": "M. Lindqvist"},
+    {"id": "MS1", "role": "MS1", "name": "R. Tanaka"},
+    {"id": "MS2", "role": "MS2", "name": "S. Duarte"}
+  ]
+}

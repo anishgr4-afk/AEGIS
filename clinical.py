@@ -77,45 +77,80 @@ def validate_symptoms(raw: Any) -> list[str]:
     return list(dict.fromkeys(raw))
 
 
-def evaluate_vitals(v: dict[str, float | int]) -> dict[str, Any]:
+def evaluate_vitals(v: dict[str, float | int | None]) -> dict[str, Any]:
+    """Apply the demo thresholds to whatever vitals are present.
+
+    A missing (or None) vital is skipped. Manual entry always supplies all six,
+    so its results are unchanged; wearables do not measure everything all the
+    time (no blood pressure without the Astroskin, for example). Callers must
+    report a skipped vital as "not measured", never as normal.
+
+    Optional extras, used only when present:
+      - bp_systolic without bp_diastolic: systolic-only estimate (Astroskin).
+      - blood_sugar_mgdl: thresholds from generate_data.py vital_statuses().
+    """
     flags: list[dict[str, str]] = []
 
     def add(key: str, label: str, value: Any, unit: str, severity: str, threshold: str) -> None:
         flags.append({"id": key, "label": label, "value": str(value), "unit": unit, "severity": severity, "threshold": threshold})
 
-    temp = float(v["body_temp_c"])
-    if temp > 38.0:
-        add("body_temp_c", "Body temperature", temp, "°C", "act", "> 38.0 °C · supplied demo threshold")
-    elif temp >= 37.5:
-        add("body_temp_c", "Body temperature", temp, "°C", "watch", "37.5–38.0 °C · supplied demo threshold")
+    def has(key: str) -> bool:
+        return v.get(key) is not None
 
-    hr = int(v["heart_rate_bpm"])
-    if hr > 100:
-        add("heart_rate_bpm", "Heart rate", hr, "bpm", "act", "> 100 bpm · supplied demo threshold")
-    elif hr > 88:
-        add("heart_rate_bpm", "Heart rate", hr, "bpm", "watch", "89–100 bpm · supplied demo threshold")
-    elif hr < 48:
-        add("heart_rate_bpm", "Heart rate", hr, "bpm", "act", "< 48 bpm · supplied demo threshold")
-    elif hr < 60:
-        add("heart_rate_bpm", "Heart rate", hr, "bpm", "watch", "< 60 bpm · supplied brief trigger")
+    if has("body_temp_c"):
+        temp = float(v["body_temp_c"])
+        if temp > 38.0:
+            add("body_temp_c", "Body temperature", temp, "°C", "act", "> 38.0 °C · supplied demo threshold")
+        elif temp >= 37.5:
+            add("body_temp_c", "Body temperature", temp, "°C", "watch", "37.5–38.0 °C · supplied demo threshold")
 
-    sys, dia = int(v["bp_systolic"]), int(v["bp_diastolic"])
-    if sys > 145 or dia > 92:
-        add("blood_pressure", "Blood pressure", f"{sys}/{dia}", "mmHg", "act", "> 145 systolic or > 92 diastolic")
-    elif sys < 90 or dia < 55:
-        add("blood_pressure", "Blood pressure", f"{sys}/{dia}", "mmHg", "act", "< 90 systolic or < 55 diastolic")
-    elif sys > 130 or dia > 84 or sys < 100 or dia < 65:
-        add("blood_pressure", "Blood pressure", f"{sys}/{dia}", "mmHg", "watch", "Outside the supplied nominal range")
+    if has("heart_rate_bpm"):
+        hr = int(v["heart_rate_bpm"])
+        if hr > 100:
+            add("heart_rate_bpm", "Heart rate", hr, "bpm", "act", "> 100 bpm · supplied demo threshold")
+        elif hr > 88:
+            add("heart_rate_bpm", "Heart rate", hr, "bpm", "watch", "89–100 bpm · supplied demo threshold")
+        elif hr < 48:
+            add("heart_rate_bpm", "Heart rate", hr, "bpm", "act", "< 48 bpm · supplied demo threshold")
+        elif hr < 60:
+            add("heart_rate_bpm", "Heart rate", hr, "bpm", "watch", "< 60 bpm · supplied brief trigger")
 
-    spo2 = int(v["spo2_pct"])
-    if spo2 < 92:
-        add("spo2_pct", "SpO₂", spo2, "%", "act", "< 92% · supplied demo threshold")
-    elif spo2 < 95:
-        add("spo2_pct", "SpO₂", spo2, "%", "watch", "92–94% · supplied demo threshold")
+    if has("bp_systolic") and has("bp_diastolic"):
+        sys, dia = int(v["bp_systolic"]), int(v["bp_diastolic"])
+        if sys > 145 or dia > 92:
+            add("blood_pressure", "Blood pressure", f"{sys}/{dia}", "mmHg", "act", "> 145 systolic or > 92 diastolic")
+        elif sys < 90 or dia < 55:
+            add("blood_pressure", "Blood pressure", f"{sys}/{dia}", "mmHg", "act", "< 90 systolic or < 55 diastolic")
+        elif sys > 130 or dia > 84 or sys < 100 or dia < 65:
+            add("blood_pressure", "Blood pressure", f"{sys}/{dia}", "mmHg", "watch", "Outside the supplied nominal range")
+    elif has("bp_systolic"):
+        # Systolic-only estimate: same systolic limits, no diastolic check.
+        sys = int(v["bp_systolic"])
+        if sys > 145:
+            add("blood_pressure", "Blood pressure (systolic est.)", sys, "mmHg", "act", "> 145 systolic · estimate, confirm with cuff")
+        elif sys < 90:
+            add("blood_pressure", "Blood pressure (systolic est.)", sys, "mmHg", "act", "< 90 systolic · estimate, confirm with cuff")
+        elif sys > 130 or sys < 100:
+            add("blood_pressure", "Blood pressure (systolic est.)", sys, "mmHg", "watch", "Systolic outside 100–130 · estimate, confirm with cuff")
 
-    rr = int(v["respiratory_rate_bpm"])
-    if rr < 12 or rr > 20:
-        add("respiratory_rate_bpm", "Respiratory rate", rr, "breaths/min", "watch", "Outside 12–20 breaths/min · supplied nominal range")
+    if has("spo2_pct"):
+        spo2 = int(v["spo2_pct"])
+        if spo2 < 92:
+            add("spo2_pct", "SpO₂", spo2, "%", "act", "< 92% · supplied demo threshold")
+        elif spo2 < 95:
+            add("spo2_pct", "SpO₂", spo2, "%", "watch", "92–94% · supplied demo threshold")
+
+    if has("respiratory_rate_bpm"):
+        rr = int(v["respiratory_rate_bpm"])
+        if rr < 12 or rr > 20:
+            add("respiratory_rate_bpm", "Respiratory rate", rr, "breaths/min", "watch", "Outside 12–20 breaths/min · supplied nominal range")
+
+    if has("blood_sugar_mgdl"):
+        sugar = int(v["blood_sugar_mgdl"])
+        if sugar > 160 or sugar < 54:
+            add("blood_sugar_mgdl", "Blood sugar", sugar, "mg/dL", "act", "> 160 or < 54 mg/dL · generate_data.py demo threshold")
+        elif sugar > 125 or sugar < 65:
+            add("blood_sugar_mgdl", "Blood sugar", sugar, "mg/dL", "watch", "126–160 or 54–64 mg/dL · generate_data.py demo threshold")
 
     urgency = "act" if any(f["severity"] == "act" for f in flags) else "watch" if flags else "routine"
     return {"urgency": urgency, "flags": flags}

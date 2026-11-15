@@ -1,0 +1,305 @@
+{
+ "nominal_transit": {
+  "vitals": {
+   "body_temp_c": 36.5,
+   "spo2_pct": 97,
+   "heart_rate_bpm": 73,
+   "bp_systolic": 118,
+   "bp_diastolic": 76,
+   "respiratory_rate_bpm": 16
+  },
+  "expected": {
+   "urgency": "routine",
+   "flags": []
+  }
+ },
+ "acute_febrile": {
+  "vitals": {
+   "body_temp_c": 38.4,
+   "spo2_pct": 94,
+   "heart_rate_bpm": 104,
+   "bp_systolic": 118,
+   "bp_diastolic": 74,
+   "respiratory_rate_bpm": 22
+  },
+  "expected": {
+   "urgency": "act",
+   "flags": [
+    {
+     "id": "body_temp_c",
+     "label": "Body temperature",
+     "value": "38.4",
+     "unit": "°C",
+     "severity": "act",
+     "threshold": "> 38.0 °C · supplied demo threshold"
+    },
+    {
+     "id": "heart_rate_bpm",
+     "label": "Heart rate",
+     "value": "104",
+     "unit": "bpm",
+     "severity": "act",
+     "threshold": "> 100 bpm · supplied demo threshold"
+    },
+    {
+     "id": "spo2_pct",
+     "label": "SpO₂",
+     "value": "94",
+     "unit": "%",
+     "severity": "watch",
+     "threshold": "92–94% · supplied demo threshold"
+    },
+    {
+     "id": "respiratory_rate_bpm",
+     "label": "Respiratory rate",
+     "value": "22",
+     "unit": "breaths/min",
+     "severity": "watch",
+     "threshold": "Outside 12–20 breaths/min · supplied nominal range"
+    }
+   ]
+  }
+ },
+ "post_eva_dcs": {
+  "vitals": {
+   "body_temp_c": 36.8,
+   "spo2_pct": 97,
+   "heart_rate_bpm": 98,
+   "bp_systolic": 122,
+   "bp_diastolic": 78,
+   "respiratory_rate_bpm": 22
+  },
+  "expected": {
+   "urgency": "watch",
+   "flags": [
+    {
+     "id": "heart_rate_bpm",
+     "label": "Heart rate",
+     "value": "98",
+     "unit": "bpm",
+     "severity": "watch",
+     "threshold": "89–100 bpm · supplied demo threshold"
+    },
+    {
+     "id": "respiratory_rate_bpm",
+     "label": "Respiratory rate",
+     "value": "22",
+     "unit": "breaths/min",
+     "severity": "watch",
+     "threshold": "Outside 12–20 breaths/min · supplied nominal range"
+    }
+   ]
+  }
+ },
+ "hypovolemic_shock": {
+  "vitals": {
+   "body_temp_c": 36.4,
+   "spo2_pct": 91,
+   "heart_rate_bpm": 125,
+   "bp_systolic": 84,
+   "bp_diastolic": 52,
+   "respiratory_rate_bpm": 26
+  },
+  "expected": {
+   "urgency": "act",
+   "flags": [
+    {
+     "id": "heart_rate_bpm",
+     "label": "Heart rate",
+     "value": "125",
+     "unit": "bpm",
+     "severity": "act",
+     "threshold": "> 100 bpm · supplied demo threshold"
+    },
+    {
+     "id": "blood_pressure",
+     "label": "Blood pressure",
+     "value": "84/52",
+     "unit": "mmHg",
+     "severity": "act",
+     "threshold": "< 90 systolic or < 55 diastolic"
+    },
+    {
+     "id": "spo2_pct",
+     "label": "SpO₂",
+     "value": "91",
+     "unit": "%",
+     "severity": "act",
+     "threshold": "< 92% · supplied demo threshold"
+    },
+    {
+     "id": "respiratory_rate_bpm",
+     "label": "Respiratory rate",
+     "value": "26",
+     "unit": "breaths/min",
+     "severity": "watch",
+     "threshold": "Outside 12–20 breaths/min · supplied nominal range"
+    }
+   ]
+  }
+ },
+ "edge_hr_59": {
+  "vitals": {
+   "body_temp_c": 36.7,
+   "spo2_pct": 97,
+   "heart_rate_bpm": 59,
+   "bp_systolic": 118,
+   "bp_diastolic": 76,
+   "respiratory_rate_bpm": 16
+  },
+  "expected": {
+   "urgency": "watch",
+   "flags": [
+    {
+     "id": "heart_rate_bpm",
+     "label": "Heart rate",
+     "value": "59",
+     "unit": "bpm",
+     "severity": "watch",
+     "threshold": "< 60 bpm · supplied brief trigger"
+    }
+   ]
+  }
+ },
+ "edge_hr_47_temp_37_5": {
+  "vitals": {
+   "body_temp_c": 37.5,
+   "spo2_pct": 92,
+   "heart_rate_bpm": 47,
+   "bp_systolic": 131,
+   "bp_diastolic": 70,
+   "respiratory_rate_bpm": 11
+  },
+  "expected": {
+   "urgency": "act",
+   "flags": [
+    {
+     "id": "body_temp_c",
+     "label": "Body temperature",
+     "value": "37.5",
+     "unit": "°C",
+     "severity": "watch",
+     "threshold": "37.5–38.0 °C · supplied demo threshold"
+    },
+    {
+     "id": "heart_rate_bpm",
+     "label": "Heart rate",
+     "value": "47",
+     "unit": "bpm",
+     "severity": "act",
+     "threshold": "< 48 bpm · supplied demo threshold"
+    },
+    {
+     "id": "blood_pressure",
+     "label": "Blood pressure",
+     "value": "131/70",
+     "unit": "mmHg",
+     "severity": "watch",
+     "threshold": "Outside the supplied nominal range"
+    },
+    {
+     "id": "spo2_pct",
+     "label": "SpO₂",
+     "value": "92",
+     "unit": "%",
+     "severity": "watch",
+     "threshold": "92–94% · supplied demo threshold"
+    },
+    {
+     "id": "respiratory_rate_bpm",
+     "label": "Respiratory rate",
+     "value": "11",
+     "unit": "breaths/min",
+     "severity": "watch",
+     "threshold": "Outside 12–20 breaths/min · supplied nominal range"
+    }
+   ]
+  }
+ },
+ "edge_bp_146": {
+  "vitals": {
+   "body_temp_c": 38.1,
+   "spo2_pct": 95,
+   "heart_rate_bpm": 89,
+   "bp_systolic": 146,
+   "bp_diastolic": 80,
+   "respiratory_rate_bpm": 21
+  },
+  "expected": {
+   "urgency": "act",
+   "flags": [
+    {
+     "id": "body_temp_c",
+     "label": "Body temperature",
+     "value": "38.1",
+     "unit": "°C",
+     "severity": "act",
+     "threshold": "> 38.0 °C · supplied demo threshold"
+    },
+    {
+     "id": "heart_rate_bpm",
+     "label": "Heart rate",
+     "value": "89",
+     "unit": "bpm",
+     "severity": "watch",
+     "threshold": "89–100 bpm · supplied demo threshold"
+    },
+    {
+     "id": "blood_pressure",
+     "label": "Blood pressure",
+     "value": "146/80",
+     "unit": "mmHg",
+     "severity": "act",
+     "threshold": "> 145 systolic or > 92 diastolic"
+    },
+    {
+     "id": "respiratory_rate_bpm",
+     "label": "Respiratory rate",
+     "value": "21",
+     "unit": "breaths/min",
+     "severity": "watch",
+     "threshold": "Outside 12–20 breaths/min · supplied nominal range"
+    }
+   ]
+  }
+ },
+ "edge_dia_54": {
+  "vitals": {
+   "body_temp_c": 36.0,
+   "spo2_pct": 91,
+   "heart_rate_bpm": 101,
+   "bp_systolic": 99,
+   "bp_diastolic": 54,
+   "respiratory_rate_bpm": 20
+  },
+  "expected": {
+   "urgency": "act",
+   "flags": [
+    {
+     "id": "heart_rate_bpm",
+     "label": "Heart rate",
+     "value": "101",
+     "unit": "bpm",
+     "severity": "act",
+     "threshold": "> 100 bpm · supplied demo threshold"
+    },
+    {
+     "id": "blood_pressure",
+     "label": "Blood pressure",
+     "value": "99/54",
+     "unit": "mmHg",
+     "severity": "act",
+     "threshold": "< 90 systolic or < 55 diastolic"
+    },
+    {
+     "id": "spo2_pct",
+     "label": "SpO₂",
+     "value": "91",
+     "unit": "%",
+     "severity": "act",
+     "threshold": "< 92% · supplied demo threshold"
+    }
+   ]
+  }
+ }
+}

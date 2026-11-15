@@ -28,6 +28,9 @@ from clinical import (
     validate_vitals,
 )
 from generate_data import generate_history
+from telemetry import create_telemetry_blueprint
+from checklist import create_checklist_blueprint
+from comms import DEFAULT_DISTANCE_KM, MAX_DISTANCE_KM, comms_fields
 
 ROOT = Path(__file__).resolve().parent
 DATA_FILE = ROOT / "data" / "mission_data.json"
@@ -40,12 +43,14 @@ lock = RLock()
 history: list[dict[str, Any]] = []
 clinical_state: dict[str, Any] = {}
 active_environment = "MARS_TRANSIT"
+# Current Earth distance. Comms delay is derived from it (see comms.py).
+active_distance_km = DEFAULT_DISTANCE_KM[active_environment]
 action_log: list[dict[str, str]] = []
 ENVIRONMENTS = {
-    "ISS_LEO": {"label": "ISS / Low Earth Orbit", "rate": 0.5, "comms": 0},
-    "MARS_TRANSIT": {"label": "Mars Transit (Deep Space)", "rate": 1.3, "comms": 1120},
-    "LUNAR_SURFACE": {"label": "Lunar Surface", "rate": 0.9, "comms": 1.3},
-    "MARS_HABITAT": {"label": "Mars Habitat", "rate": 0.9, "comms": 840},
+    "ISS_LEO": {"label": "ISS / Low Earth Orbit", "rate": 0.5},
+    "MARS_TRANSIT": {"label": "Mars Transit (Deep Space)", "rate": 1.3},
+    "LUNAR_SURFACE": {"label": "Lunar Surface", "rate": 0.9},
+    "MARS_HABITAT": {"label": "Mars Habitat", "rate": 0.9},
 }
 
 
@@ -346,6 +351,7 @@ def scenario(scenario_name: str):
             day.clear()
             day.update(generate_history()[-1])
             day["environment"] = ENVIRONMENTS[active_environment]["label"]
+            day.update(comms_fields(active_distance_km))
             record_action("Nominal scenario activated")
         elif scenario_name == "solar_storm":
             m = day["space_metrics"]
@@ -377,17 +383,26 @@ def scenario(scenario_name: str):
 
 @app.post("/api/environment")
 def set_environment():
-    global active_environment
+    global active_environment, active_distance_km
     payload = request.get_json(silent=True)
     name = payload.get("environment") if isinstance(payload, dict) else None
     if name not in ENVIRONMENTS:
         return jsonify({"error": "environment must be ISS_LEO, MARS_TRANSIT, LUNAR_SURFACE, or MARS_HABITAT"}), 400
+    # Optional override; otherwise use the environment's default distance.
+    if "earth_distance_km" in payload:
+        try:
+            distance_km = finite_number(payload, "earth_distance_km", 0, MAX_DISTANCE_KM)
+        except ValueError as error:
+            return jsonify({"error": str(error)}), 400
+    else:
+        distance_km = DEFAULT_DISTANCE_KM[name]
     with lock:
         active_environment = name
+        active_distance_km = distance_km
         env = ENVIRONMENTS[name]
         day = active_day()
         day["environment"] = env["label"]
-        day["comms_delay_seconds"] = env["comms"]
+        day.update(comms_fields(distance_km))
         day["space_metrics"]["radiation_msv"]["daily_rate"] = env["rate"]
         # Environment switch changes modeled daily rate; accumulated dose is
         # preserved. A solar-event increment already present remains included.
@@ -397,7 +412,7 @@ def set_environment():
         update_systems(day)
         day["alerts"] = make_alerts(day)
         persist()
-        return jsonify({"environment": name, "label": env["label"], "daily_radiation_rate_msv": env["rate"], "comms_delay_seconds": env["comms"], "day": day})
+        return jsonify({"environment": name, "label": env["label"], "daily_radiation_rate_msv": env["rate"], **comms_fields(distance_km), "day": day})
 
 
 @app.get("/api/flight-surgeon-packet")
@@ -423,8 +438,62 @@ def flight_surgeon_packet():
     return response
 
 
+def on_telemetry_urgency_change(old: str | None, new: str, detail: str) -> None:
+    """Record wearable triage CHANGES in the MET audit log. Individual readings
+    are not logged - at ~1 per second they would push everything else out of
+    the 100-entry log within two minutes."""
+    with lock:
+        add_audit_event(clinical_state, mission_start_date(), "telemetry_triage",
+                        f"Wearable triage {old or 'start'} -> {new}: {detail}")
+        persist_clinical_state()
+
+
+# Simulated wearable telemetry (see telemetry.py and simulator.py).
+telemetry_bp = create_telemetry_blueprint(on_telemetry_urgency_change)
+app.register_blueprint(telemetry_bp)
+
+# Emergency checklist lookup (see checklist.py): crew taps what they see, the
+# live wearable vitals fill in the rest, matching procedure PDFs come up.
+app.register_blueprint(create_checklist_blueprint(
+    live_summary=telemetry_bp.crew.summary,
+    comms_delay=lambda: active_day().get("comms_delay_seconds", 0),
+))
+
+
+# Lifeline emergency page (Lifeline_Emergency.html, a teammate's design).
+# The page polls /api/lifeline/live for the wearable feed and comms state,
+# and posts crew inputs to /api/checklist/match.
+LIFELINE_PAGE = "Lifeline_Emergency.html"
+
+
+@app.get("/lifeline")
+def lifeline_page():
+    return send_from_directory(ROOT, LIFELINE_PAGE, mimetype="text/html")
+
+
+@app.get("/api/lifeline/live")
+def lifeline_live():
+    """One poll for everything live the page shows: every crewmember's
+    telemetry summary (medians, sources, triage flags) plus comms. The page
+    never judges readings itself."""
+    with lock:
+        day = active_day()
+        comms = {
+            "environment": active_environment,
+            "label": ENVIRONMENTS[active_environment]["label"],
+            **comms_fields(active_distance_km),
+        }
+        mission = {"day": day.get("day"), "date": day.get("date")}
+    return jsonify({"crew": telemetry_bp.crew.all(), "default_crew": telemetry_bp.crew.default,
+                    "comms": comms, "mission": mission})
+
+
 with lock:
     history = load_history()
+    # Recompute the delay from distance, so older saved data with a fixed
+    # comms_delay_seconds picks up the speed-of-light value.
+    for record in history:
+        record.update(comms_fields(active_distance_km))
     if CLINICAL_FILE.is_file():
         with CLINICAL_FILE.open(encoding="utf-8") as stream:
             clinical_state = json.load(stream)

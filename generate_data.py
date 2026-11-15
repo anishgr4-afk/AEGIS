@@ -10,6 +10,8 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 
+from comms import DEFAULT_DISTANCE_KM, comms_fields
+
 ROOT = Path(__file__).resolve().parent
 OUTPUT = ROOT / "data" / "mission_data.json"
 START_DATE = date(2026, 7, 23)  # Day 115 is 2026-11-14.
@@ -101,7 +103,7 @@ def generate_history() -> list[dict]:
             alerts.append({"severity": "green", "domain": "All Systems", "title": "Nominal Deep-Space Transit", "explanation": "Simulated vitals and countermeasures are within configured console thresholds.", "action": "Continue standard daily ARED/CEVIS protocol.", "nasa_ref": "NASA-STD-3001 [V1 4024, V1 4027]"})
         history.append({
             "day": day, "date": (START_DATE + timedelta(days=day - 1)).isoformat(),
-            "environment": "Mars Transit (Deep Space)", "comms_delay_seconds": 1120,
+            "environment": "Mars Transit (Deep Space)", **comms_fields(DEFAULT_DISTANCE_KM["MARS_TRANSIT"]),
             "inputs": {"exercise_mins": exercise, "sleep_hours": sleep, "mood_score": mood},
             "vitals": vital_values,
             "space_metrics": {
