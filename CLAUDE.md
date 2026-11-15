@@ -42,7 +42,7 @@ npm run dev                                # placeholder UI on :5173, proxies /a
 | `data/checklist_triage.json` | The decision tree: rules, observed signs, "not covered" notes. **Draft, needs team review** |
 | `data/checklist_sections.json` | Hand-built index of 68 checklist procedures, by printed page range |
 | `data/checklist/` | Generated per-procedure PDFs and `manifest.json` (from `scripts/split_checklist.py`) |
-| `Lifeline_Emergency.html` | Teammate's emergency page, wired to the backend (live vitals, checklist PDFs). Plan: `docs/lifeline-backend-plan.md` |
+| `Lifeline_Emergency.html` | The emergency page: live vitals, ranked procedures, checklist PDFs. Self-contained (fonts and photos embedded). Plan: `docs/lifeline-backend-plan.md` |
 | `src/` | Placeholder React UI, owned by another teammate - don't modify without asking |
 | `docs/session-notes/` | Per-session history |
 
@@ -68,6 +68,30 @@ npm run dev                                # placeholder UI on :5173, proxies /a
 - **High-rate data goes to `/api/telemetry`.** `/api/clinical/vitals` writes
   the audit log and a file on every call.
 
+## The page's look
+
+`Lifeline_Emergency.html` is one self-contained file: no network at run time,
+because a console on a spacecraft may not have one. Fonts and crew photos are
+embedded as base64.
+
+- **Type**: Fraunces 500 for headings, numbers and vitals; Manrope for body
+  text. Only the Fraunces weights in use (400, 500) are embedded, so styling
+  something 600+ silently falls back to a system serif.
+- **Colour**: ink `#09080D`; mint `#A8C5B3` normal; blush `#D8B7C0` watch;
+  `#EF8A96` act now. Severity drives `--c` through `.s0/.s1/.s2`, so a status
+  colour is set in one place, not per element.
+- **Crew photos** are `.av0`-`.av3`, keyed by crew id in `AV`, so the roster
+  still comes from the backend. A crew member with no photo still renders.
+- **Say the status in words** ("Watch", "Act now") next to the reading.
+  Don't add a warning icon to every out-of-range vital: with six vitals and
+  four crew, repeated icons read as noise.
+- **Checklist figures need `mix-blend-mode:screen`** over a near-black frame
+  (`#050408`). The scans have white backgrounds; without it they are grey
+  boxes. A procedure with no figure uses the full width (`.split.solo`)
+  rather than showing a placeholder drawing.
+- Keep it coherent: one radius (`--r`), one set of panel/line tokens, and
+  sentence case in the interface. Earlier versions shouted in all-caps.
+
 ## Gotchas
 
 - **Text extraction from `Medical Checklist Rev H.pdf` is garbled.**
@@ -89,6 +113,14 @@ npm run dev                                # placeholder UI on :5173, proxies /a
   distance / speed of light (Mars default 225 million km, 12.5 min one way).
   `POST /api/environment` accepts an optional `earth_distance_km`. Don't
   hardcode `comms_delay_seconds` anywhere.
+- **Verifying the page with no browser tool.** Run its script against a stub
+  DOM: fake `document.getElementById` returning stub elements, capture the
+  `click` handler, point `fetch` at `127.0.0.1:5000`, then assert on the HTML
+  the render functions produce. Faster than a real browser and it exercises
+  the live backend. The page's script is the last `<script>` block.
+- **A teammate's `Lifeline_Emergency_v7.html`** (in `~/Downloads`, not the
+  repo) is a fork of this page, not a theme: same 13 guides, nearly the same
+  script. Its stylesheet is safe to borrow; its script would revert fixes.
 - **Windows shell quirks.**
   - Printing non-ASCII characters (e.g. `SpO₂`) from Python in PowerShell
     fails with cp1252; write files with `encoding="utf-8"`.
