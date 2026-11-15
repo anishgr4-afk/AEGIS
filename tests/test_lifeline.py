@@ -88,7 +88,7 @@ def client(monkeypatch):
 
 def test_lifeline_page_is_served(client):
     resp = client.get("/lifeline")
-    assert resp.status_code == 200 and b"LIFELINE" in resp.data
+    assert resp.status_code == 200 and b"AEGIS" in resp.data
 
 
 def test_lifeline_live_bundles_every_crewmember_and_comms(client):

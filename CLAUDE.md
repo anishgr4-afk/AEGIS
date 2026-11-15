@@ -18,7 +18,7 @@ Use a separate terminal for each step. Start Flask before the simulator.
 .\.venv\Scripts\python.exe app.py          # Flask API on :5000
 .\.venv\Scripts\python.exe simulator.py    # wearable feed (optional; --help)
 npm run dev                                # placeholder UI on :5173, proxies /api
-# Lifeline emergency page: http://localhost:5000/lifeline (served by Flask)
+# Aegis emergency page: http://localhost:5000/lifeline (served by Flask)
 .\.venv\Scripts\python.exe -m pytest tests/ -q
 .\.venv\Scripts\python.exe scripts\split_checklist.py   # regenerate data/checklist/
 ```

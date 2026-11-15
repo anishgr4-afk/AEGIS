@@ -1,4 +1,4 @@
-# Lifeline page ↔ backend: plan
+# Aegis page ↔ backend: plan
 
 Status as of 15 Nov 2026. `Lifeline_Emergency.html` is served by Flask at
 `/lifeline` and already shows live wearable data. This plan covers what is
@@ -46,4 +46,4 @@ and the Earth link connected / not connected toggle.
   names and doses (`dose:` fields in `E`). The project rule is that
   app-written text never names drugs or doses; the checklist PDFs show them
   unmodified with `*` highlighted. Remove them, or keep them and change the rule?
-- **Merge with the React UI in `src/`?** Or does Lifeline replace it?
+- **Merge with the React UI in `src/`?** Or does Aegis replace it?
