@@ -17,7 +17,7 @@ You need Python 3.10 or newer.
 git clone https://github.com/anishgr4-afk/AEGIS.git
 cd AEGIS
 
-# 2. Create a virtual environment and install
+# 2. Create a virtual environment and install / Optional
 python -m venv .venv
 # Windows:      .venv\Scripts\activate
 # macOS/Linux:  source .venv/bin/activate
