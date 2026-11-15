@@ -1,0 +1,170 @@
+.mission-orbit {
+  --mo-cyan: #86e4ed;
+  --mo-muted: #809bad;
+  container-type: inline-size;
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  color: #dcecf2;
+  background: #0b1725;
+  border: 1px solid #294052;
+  border-radius: 7px;
+  box-shadow: 0 12px 38px #03091630;
+}
+.mission-orbit *, .mission-orbit *::before, .mission-orbit *::after { box-sizing: border-box; }
+.mission-orbit__header {
+  min-height: 72px;
+  padding: 15px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(105deg, #102334, #101c2d);
+  border-bottom: 1px solid #263c50;
+}
+.mission-orbit__heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.mission-orbit__heading-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  flex: 0 0 33px;
+  border: 1px solid #315767;
+  border-radius: 5px;
+  background: #153344;
+}
+.mission-orbit__heading-icon::before, .mission-orbit__heading-icon::after {
+  content: '';
+  position: absolute;
+  width: 17px;
+  height: 8px;
+  border: 1px solid #79dce5;
+  border-radius: 50%;
+  transform: rotate(-40deg);
+}
+.mission-orbit__heading-icon::after { width: 5px; height: 5px; border: 0; background: #a3f6f7; box-shadow: 0 0 8px #79e7f0; transform: none; }
+.mission-orbit__eyebrow, .mission-orbit__badge, .mission-orbit__overline, .mission-orbit__copy-foot,
+.mission-orbit__stage-index, .mission-orbit__stage-bottom, .mission-orbit__legend,
+.mission-orbit__control-label, .mission-orbit__motion, .mission-orbit__loading {
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-weight: 700;
+  letter-spacing: .11em;
+}
+.mission-orbit__eyebrow { display: block; color: #76a3b2; font-size: 9px; line-height: 1.3; }
+.mission-orbit__eyebrow i, .mission-orbit__badge i { color: #426475; font-style: normal; padding: 0 4px; }
+.mission-orbit__heading h2 { margin: 5px 0 0; color: #eaf6f8; font-size: 15px; line-height: 1.2; letter-spacing: -.01em; }
+.mission-orbit__badge { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; padding: 7px 9px; color: #9bd9df; background: #173642; border: 1px solid #315963; border-radius: 3px; font-size: 9px; line-height: 1; white-space: nowrap; }
+.mission-orbit__badge > span, .mission-orbit__motion > span { width: 5px; height: 5px; border-radius: 50%; background: #76dde4; box-shadow: 0 0 8px #76dde47a; }
+.mission-orbit__stage {
+  height: 355px;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 59% 51%, #24324b 0%, #111e33 29%, transparent 56%),
+    radial-gradient(ellipse at 86% 23%, #28213f 0%, transparent 37%),
+    linear-gradient(115deg, #0b1b2a 0%, #091522 53%, #0b1223 100%);
+}
+.mission-orbit__stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .42;
+  background-image: linear-gradient(#a0d4ee0c 1px, transparent 1px), linear-gradient(90deg, #a0d4ee0c 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: linear-gradient(90deg, #000, transparent 70%);
+}
+.mission-orbit__canvas { position: absolute; inset: 0; }
+.mission-orbit__canvas canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: pan-y; }
+.mission-orbit__canvas canvas.is-dragging { cursor: grabbing; }
+.mission-orbit__stage-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, #0b1c2bf5 0%, #0b1c2bcf 19%, #0b1c2b35 42%, transparent 61%), linear-gradient(0deg, #0914205e, transparent 28%); }
+.mission-orbit__copy { position: absolute; z-index: 1; top: 47px; left: 30px; max-width: 270px; pointer-events: none; }
+.mission-orbit__overline { display: flex; align-items: center; gap: 8px; color: #7db6c2; font-size: 9px; line-height: 1.4; }
+.mission-orbit__overline b { display: block; width: 18px; height: 2px; background: #6fdbe5; }
+.mission-orbit__copy h3 { margin: 19px 0 12px; color: #eaf5f7; font-size: clamp(23px, 2vw, 30px); line-height: 1.13; letter-spacing: -.035em; font-weight: 600; }
+.mission-orbit__copy h3 em { color: #89e4eb; font-style: normal; }
+.mission-orbit__copy p { max-width: 235px; margin: 0; color: #a6bdca; font-size: 11px; line-height: 1.65; }
+.mission-orbit__copy-foot { display: flex; align-items: center; gap: 8px; margin-top: 26px; color: #82a3b0; font-size: 9px; }
+.mission-orbit__copy-foot span { width: 22px; height: 1px; background: #49707c; }
+.mission-orbit__stage-index { position: absolute; top: 21px; right: 23px; display: flex; flex-direction: column; gap: 5px; text-align: right; pointer-events: none; font-size: 9px; color: #6f91a6; }
+.mission-orbit__stage-index strong { color: #9ab7c6; font-size: 9px; }
+.mission-orbit__stage-bottom { position: absolute; left: 30px; right: 23px; bottom: 18px; display: flex; justify-content: space-between; gap: 12px; color: #7194a6; font-size: 9px; pointer-events: none; }
+.mission-orbit__stage-bottom b { color: #83dae5; font-size: 12px; }
+.mission-orbit__loading, .mission-orbit__fallback { position: absolute; top: 50%; left: 64%; transform: translate(-50%, -50%); }
+.mission-orbit__loading { color: #86b6c5; font-size: 9px; white-space: nowrap; }
+.mission-orbit__fallback { width: min(260px, 42%); padding: 18px; color: #a9c0cc; background: #102535e8; border: 1px solid #345263; border-radius: 5px; font-size: 11px; line-height: 1.55; }
+.mission-orbit__fallback strong, .mission-orbit__fallback span { display: block; }
+.mission-orbit__fallback strong { margin-bottom: 6px; color: #e6f4f6; font-size: 12px; }
+.mission-orbit__footer { min-height: 64px; display: flex; align-items: center; gap: 18px; padding: 12px 20px; background: #0d1b2a; border-top: 1px solid #25394b; }
+.mission-orbit__legend { display: flex; align-items: center; gap: 15px; color: #8097a7; font-size: 9px; white-space: nowrap; }
+.mission-orbit__legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.mission-orbit__dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; }
+.mission-orbit__dot--amber { background: #e8a66f; box-shadow: 0 0 8px #e8a66f66; }
+.mission-orbit__dot--cyan { background: #7bdbe5; box-shadow: 0 0 8px #7bdbe566; }
+.mission-orbit__dot--violet { background: #a995ef; box-shadow: 0 0 8px #a995ef66; }
+.mission-orbit__controls { display: flex; align-items: center; gap: 7px; margin-left: auto; }
+.mission-orbit__control-label { color: #6f8b9b; font-size: 9px; margin-right: 3px; }
+.mission-orbit__direction-group { display: flex; align-items: center; gap: 3px; }
+.mission-orbit__controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  color: #aac6d0;
+  background: #142a3a;
+  border: 1px solid #2b4859;
+  border-radius: 3px;
+  cursor: pointer;
+  font: 600 10px/1 system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.mission-orbit__direction-group button { width: 30px; padding: 0; }
+.mission-orbit__controls .mission-orbit__action { padding: 0 10px; white-space: nowrap; }
+.mission-orbit__controls .mission-orbit__action--pause { color: #91e3e9; border-color: #396471; background: #173540; }
+.mission-orbit__controls button:hover:not(:disabled) { color: #e4fbfb; background: #1d4050; border-color: #6bc7d1; }
+.mission-orbit__controls button:focus-visible { outline: 2px solid #91edf1; outline-offset: 2px; }
+.mission-orbit__controls button:disabled { opacity: .45; cursor: not-allowed; }
+.mission-orbit__motion { display: inline-flex; align-items: center; gap: 6px; padding-left: 15px; border-left: 1px solid #29404f; color: #7793a2; font-size: 8px; white-space: nowrap; }
+.mission-orbit__sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@container (max-width: 850px) {
+  .mission-orbit__motion:not(.mission-orbit__motion--reduced) { display: none; }
+  .mission-orbit__copy { max-width: 235px; }
+  .mission-orbit__copy p { max-width: 205px; }
+}
+@container (max-width: 620px) {
+  .mission-orbit__header { min-height: 65px; padding: 13px 15px; }
+  .mission-orbit__badge { font-size: 8px; padding: 6px; }
+  .mission-orbit__stage { height: 380px; }
+  .mission-orbit__stage-shade { background: linear-gradient(180deg, #0b1b2af5 0%, #0b1b2aaf 27%, #0b1b2a20 48%, transparent 70%); }
+  .mission-orbit__copy { top: 23px; left: 19px; max-width: 72%; }
+  .mission-orbit__copy h3 { margin: 12px 0 8px; font-size: 23px; }
+  .mission-orbit__copy p { max-width: 235px; font-size: 10px; }
+  .mission-orbit__copy-foot { display: none; }
+  .mission-orbit__stage-index { top: 22px; right: 16px; font-size: 8px; }
+  .mission-orbit__stage-index strong { font-size: 8px; }
+  .mission-orbit__stage-bottom { left: 19px; right: 16px; bottom: 15px; font-size: 8px; }
+  .mission-orbit__footer { flex-wrap: wrap; gap: 11px; padding: 13px 15px; }
+  .mission-orbit__legend { width: 100%; gap: 15px; font-size: 8px; }
+  .mission-orbit__controls { margin-left: 0; flex-wrap: wrap; }
+  .mission-orbit__motion--reduced { width: 100%; padding: 0; border: 0; }
+  .mission-orbit__fallback { top: 68%; left: 50%; width: min(260px, 75%); }
+  .mission-orbit__loading { top: 65%; left: 50%; }
+}
+@container (max-width: 360px) {
+  .mission-orbit__heading { gap: 8px; }
+  .mission-orbit__heading-icon { width: 27px; height: 27px; flex-basis: 27px; }
+  .mission-orbit__eyebrow { font-size: 8px; letter-spacing: .04em; white-space: nowrap; }
+  .mission-orbit__badge { letter-spacing: .04em; }
+  .mission-orbit__badge i, .mission-orbit__badge i + * { display: none; }
+  .mission-orbit__stage-index { display: none; }
+  .mission-orbit__copy { max-width: 88%; }
+  .mission-orbit__control-label { display: none; }
+  .mission-orbit__controls { gap: 5px; }
+  .mission-orbit__controls .mission-orbit__action { padding: 0 7px; }
+}
+@media (prefers-reduced-motion: reduce) { .mission-orbit *, .mission-orbit *::before, .mission-orbit *::after { transition: none !important; animation: none !important; } }
+
+/* Dashboard integration spacing */
+.dashboard-orbit { margin: 0 0 16px; }
+.dashboard-briefing { margin: 16px 0 0; }

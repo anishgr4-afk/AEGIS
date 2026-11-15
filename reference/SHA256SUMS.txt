@@ -1,0 +1,4 @@
+a6383dab939b4aad6493f3cd1e210dc35883f3e5fb67ebcfce15877e21a9da10  reference/SPECIFICATION.md
+fdaa19336f94b41244a293bd6b90aba1ca54f2dc02ace3a398d2a2772da34d89  reference/MedicalChecklistRevH.pdf
+e65882af9c9a9861b520268f739baadba08f6225feb14489ff7c46442de26ce9  reference/nasa-std-3001-vol-1-rev-c-with-signature.pdf
+a517a05898b9170873ab94cff9103fd4234ff007f7017f74ef1dde676ee5f986  public/body.png
