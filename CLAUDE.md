@@ -17,15 +17,12 @@ Use a separate terminal for each step. Start Flask before the simulator.
 ```powershell
 .\.venv\Scripts\python.exe app.py          # Flask API on :5000
 .\.venv\Scripts\python.exe simulator.py    # wearable feed (optional; --help)
-npm run dev                                # placeholder UI on :5173, proxies /api
-# Aegis emergency page: http://localhost:5000/lifeline (served by Flask)
+# Aegis Lifeline page: http://localhost:5000/ (also available at /lifeline)
 .\.venv\Scripts\python.exe -m pytest tests/ -q
 .\.venv\Scripts\python.exe scripts\split_checklist.py   # regenerate data/checklist/
 ```
 
 - **Setup**: `pip install -r requirements.txt -r requirements-pdf.txt`.
-- **Node** was installed during a session. A terminal opened before that
-  install won't find `npm` - open a new one.
 - **Flask runs with `debug=False`.** Restart it after code changes. A restart
   also empties the in-memory wearable buffer.
 
@@ -43,7 +40,6 @@ npm run dev                                # placeholder UI on :5173, proxies /a
 | `data/checklist_sections.json` | Hand-built index of 68 checklist procedures, by printed page range |
 | `data/checklist/` | Generated per-procedure PDFs and `manifest.json` (from `scripts/split_checklist.py`) |
 | `Lifeline_Emergency.html` | The emergency page: live vitals, ranked procedures, checklist PDFs. Self-contained (fonts and photos embedded). Plan: `docs/lifeline-backend-plan.md` |
-| `src/` | Placeholder React UI, owned by another teammate - don't modify without asking |
 | `docs/session-notes/` | Per-session history |
 
 ## Rules to keep

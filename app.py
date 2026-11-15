@@ -14,7 +14,7 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
-from flask import Flask, jsonify, make_response, render_template, request, send_from_directory
+from flask import Flask, jsonify, make_response, request, send_from_directory
 from flask_cors import CORS
 
 from clinical import (
@@ -36,8 +36,7 @@ ROOT = Path(__file__).resolve().parent
 DATA_FILE = ROOT / "data" / "mission_data.json"
 CLINICAL_FILE = ROOT / "data" / "clinical_state.json"
 PROTOCOL_FILE = ROOT / "data" / "medical_database.json"
-DIST_DIR = ROOT / "dist"
-app = Flask(__name__, template_folder=str(ROOT / "templates"))
+app = Flask(__name__)
 CORS(app)
 lock = RLock()
 history: list[dict[str, Any]] = []
@@ -193,21 +192,7 @@ def apply_inputs(payload: dict) -> dict:
 
 @app.get("/")
 def index():
-    built_index = DIST_DIR / "index.html"
-    if built_index.is_file():
-        return send_from_directory(DIST_DIR, "index.html")
-    return render_template("index.html")
-
-
-@app.get("/assets/<path:filename>")
-def frontend_asset(filename: str):
-    """Serve built Vite assets, with the source body image as a fallback."""
-    asset_dir = DIST_DIR / "assets"
-    if (asset_dir / filename).is_file():
-        return send_from_directory(asset_dir, filename)
-    if filename == "body.png":
-        return send_from_directory(ROOT / "src" / "assets", filename, mimetype="image/png")
-    return jsonify({"error": "asset not found"}), 404
+    return send_from_directory(ROOT, LIFELINE_PAGE, mimetype="text/html")
 
 
 @app.get("/api/clinical/state")

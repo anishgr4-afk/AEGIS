@@ -46,4 +46,4 @@ and the Earth link connected / not connected toggle.
   names and doses (`dose:` fields in `E`). The project rule is that
   app-written text never names drugs or doses; the checklist PDFs show them
   unmodified with `*` highlighted. Remove them, or keep them and change the rule?
-- **Merge with the React UI in `src/`?** Or does Aegis replace it?
+- **UI ownership:** Lifeline is the primary UI; the old React/Vite placeholder has been removed.

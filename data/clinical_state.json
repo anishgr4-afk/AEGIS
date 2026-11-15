@@ -74,6 +74,30 @@
       "met": "114:22:09:56",
       "type": "symptoms_checked",
       "detail": "Reported symptoms: none"
+    },
+    {
+      "timestamp_utc": "2026-11-15T14:55:44+00:00",
+      "met": "115:14:55:44",
+      "type": "telemetry_triage",
+      "detail": "Wearable triage routine -> watch: MS2: Heart rate 89 bpm"
+    },
+    {
+      "timestamp_utc": "2026-11-15T14:55:58+00:00",
+      "met": "115:14:55:58",
+      "type": "telemetry_triage",
+      "detail": "Wearable triage watch -> act: MS2: Heart rate 101 bpm; SpO₂ 94 %; Respiratory rate 21 breaths/min"
+    },
+    {
+      "timestamp_utc": "2026-11-15T15:03:18+00:00",
+      "met": "115:15:03:18",
+      "type": "telemetry_triage",
+      "detail": "Wearable triage routine -> watch: MS2: Heart rate 89 bpm"
+    },
+    {
+      "timestamp_utc": "2026-11-15T15:03:32+00:00",
+      "met": "115:15:03:32",
+      "type": "telemetry_triage",
+      "detail": "Wearable triage watch -> act: MS2: Heart rate 101 bpm; SpO₂ 94 %; Respiratory rate 21 breaths/min"
     }
   ]
 }
