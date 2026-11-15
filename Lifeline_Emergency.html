@@ -163,6 +163,31 @@ button:focus-visible,input:focus-visible{outline:2px solid #fff;outline-offset:3
 @media (max-width:1100px){.proto .split{grid-template-columns:1fr}.fig{position:static;order:-1}}
 @media (max-width:900px){.split{grid-template-columns:1fr}.fig{position:static;order:-1}}
 @media (prefers-reduced-motion:reduce){.flow,.ping,.blink,.proto{animation:none}}
+/* live backend: checklist pages strip, vitals source line, comms delay */
+.cl{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--line);background:var(--panel)}
+.cl.emergency{border-color:var(--red)} .cl.urgent{border-color:var(--orange)}
+.cl-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;font-size:15px;letter-spacing:.04em}
+.cl-h .lbl{color:var(--muted)} .cl-h small{flex-basis:100%;font-size:13px;line-height:1.35;color:var(--muted)}
+.cl-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.cli{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 10px;border:1px solid var(--line2);border-left-width:3px;background:rgba(255,255,255,.02)}
+.cli.emergency{border-left-color:var(--red)} .cli.urgent{border-left-color:var(--orange)} .cli.routine{border-left-color:var(--line)}
+.cli.top{background:rgba(255,255,255,.07)}
+.cln{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid #fff;font-size:17px;font-weight:300;font-variant-numeric:tabular-nums}
+.cli.top .cln{background:#fff;color:#000}
+.clt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.clt b{font-weight:600;font-size:15px;letter-spacing:.04em}
+.clt em{font-style:normal;font-size:12px;letter-spacing:.1em;color:var(--muted)}
+.clt em i{font-style:normal;color:#fff}
+.clt small{font-size:13px;line-height:1.35;color:var(--soft)}
+.cla{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+.cla a,.cla button{display:inline-flex;align-items:center;min-height:40px;padding:0 12px;border:1px solid rgba(255,255,255,.5);background:transparent;color:#fff;text-decoration:none;font-family:var(--f-label);font-size:10.5px;letter-spacing:.14em}
+.cla a{background:#fff;color:#000;border-color:#fff}
+.cla a:focus-visible,.cla button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.clmore{align-self:flex-start}
+@media (max-width:600px){.cli{grid-template-columns:36px minmax(0,1fr)}.cla{grid-column:2;justify-content:flex-start}}
+.vsrc{display:block;font-size:12px;letter-spacing:.04em;color:var(--muted)}
+.dl{margin:8px 0 0;font-size:13px;line-height:1.4;letter-spacing:.06em;color:var(--muted)}
+.dl b{font-weight:400;color:#fff}
 </style>
 </head>
 <body>
@@ -409,22 +434,136 @@ var E = [
 E.forEach(function(e){var n=0;e.items.forEach(function(it){if(it.t){n++;it.n=n}});e.steps=n});
 
 /* ---------- crew and vitals (from Lifeline_Onboard.html; MS2 altered to show alerts) ---------- */
-var CREW=[
- {role:'CDR',name:'A. Okafor',v:[[66,116,74,14,36.6,98],[70,118,76,14,36.7,98],[68,120,78,15,36.7,97],[71,118,76,14,36.8,98]]},
- {role:'PLT',name:'M. Lindqvist',v:[[62,112,72,13,36.5,99],[64,114,72,14,36.6,98],[63,112,70,13,36.6,99],[65,114,74,14,36.6,98]]},
- {role:'MS1',name:'R. Tanaka',v:[[74,122,80,15,36.8,97],[78,124,82,16,36.9,97],[76,122,80,15,36.8,98],[75,120,78,15,36.8,98]]},
- {role:'MS2',name:'S. Duarte',v:[[70,114,72,14,36.6,98],[84,122,78,16,36.8,97],[104,134,86,19,37.0,94],[124,142,92,22,37.2,91]]}];
-var RANGE=[[[60,100],[50,120]],[[100,139],[90,159]],[[60,89],[50,99]],[[12,20],[8,25]],[[36.1,37.5],[35,38.4]],[[95,100],[90,100]]];
+var CREW=[];  /* roster and vitals come from /api/lifeline/live (data/crew.json + simulator.py) */
 var LVC=['#FFFFFF','#FF9A2E','#FF4D4D'], LVN=['','warn','crit'];
 
-var S={person:0,link:true,q:'',open:-1,fig:null,panel:false,f:{state:[],area:[],sign:[],cause:[]}};
+/* ---------- live backend (app.py) ----------
+   Every crewmember's wearables stream to the backend (simulator.py). The
+   backend (telemetry.py) judges the readings; this page only shows its
+   verdict. Crew inputs go to /api/checklist/match, which returns the Medical
+   Checklist procedures to open, most urgent first. */
+var API=location.protocol==='file:'?'http://127.0.0.1:5000':'';
+var LIVE={err:'Connecting to the console…',crew:{},comms:null,inputs:null,match:null,seq:0,shown:'',picked:false};
+var LIVE_ROWS=[ /* label, telemetry signal, triage flag id, unit, decimals */
+ ['Heart rate','heart_rate_bpm','heart_rate_bpm','bpm',0],
+ ['Blood pressure','bp_systolic_est','blood_pressure','mmHg sys. est.',0],
+ ['Resp. rate','respiratory_rate_bpm','respiratory_rate_bpm','/min',0],
+ ['SpO₂','spo2_pct','spo2_pct','%',0],
+ ['Skin temp','skin_temp_c','skin_temp_c','°C',1],
+ ['Glucose','blood_sugar_mgdl','blood_sugar_mgdl','mg/dL',0]];
+var SEV={act:2,watch:1};
+function rec(i){var p=CREW[i];return p?LIVE.crew[p.id]:null}
+function online(i){var r=rec(i);return !!(r&&r.t&&r.t.feed&&r.t.feed.online)}
+function liveLevel(i){return online(i)?(SEV[rec(i).t.triage.urgency]||0):0}
+function flagsById(t){var m={};((t&&t.triage&&t.triage.flags)||[]).forEach(function(f){m[f.id]=Math.max(m[f.id]||0,SEV[f.severity]||0)});return m}
+function spark(s,c){if(s.length<2)return '<svg width="100" height="32" aria-hidden="true" style="flex:none"></svg>';
+  var mn=Math.min.apply(null,s),mx=Math.max.apply(null,s);
+  var pts=s.map(function(v,i){return[4+i*92/(s.length-1),mx===mn?16:27-(v-mn)/(mx-mn)*22]}),e=pts[pts.length-1];
+  return '<svg width="100" height="32" viewBox="0 0 100 32" aria-hidden="true" style="flex:none"><polyline points="'+pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1)}).join(' ')+'" fill="none" stroke="'+c+'" stroke-width="1.5" stroke-linejoin="round"/><circle cx="'+e[0].toFixed(1)+'" cy="'+e[1].toFixed(1)+'" r="2.8" fill="'+c+'"/></svg>'}
+function liveVitalsHtml(){
+  var R=rec(S.person),ok=online(S.person),t=R&&R.t,sig=(t&&t.signals)||{},fl=flagsById(t);
+  var why=LIVE.err||(CREW[S.person]?'No wearable feed for '+CREW[S.person].role+'. Start simulator.py.':'');
+  return (ok?'':'<p class="vsrc" style="padding:8px 0;font-size:14px;color:var(--orange)">'+esc(why)+'</p>')+LIVE_ROWS.map(function(r){
+    var s=ok?sig[r[1]]:null,on=!!(s&&s.status==='measured'),lv=on?(fl[r[2]]||0):0,c=on?LVC[lv]:'#9A9A9A';
+    var sub=on?s.source_label+(s.context&&s.context!=='rest'?' · '+s.context:''):(s&&s.reason?s.reason:'not measured');
+    return '<div class="vrow"><div class="l"><span class="k lbl">'+r[0]+(lv?tri(c,lv===2?'Critical':'Out of range'):'')+'</span><span style="white-space:nowrap"><span class="v" style="color:'+c+'">'+(on?Number(s.value).toFixed(r[4]):'—')+'</span><span class="u">'+r[3]+'</span></span><span class="vsrc">'+esc(sub)+'</span></div>'+
+     spark(on?(R.hist[r[1]]||[]):[],c)+'</div>'}).join('')}
+function fmtDelay(s){function d(x){return x<100?x.toFixed(1).replace(/\.0$/,''):String(Math.round(x))}return s<60?d(s)+' s':d(s/60)+' min'}
+function delayHtml(){var c=LIVE.comms;return c?'<p class="dl"><b>'+fmtDelay(c.comms_delay_seconds)+'</b> one way to Earth · <b>'+fmtDelay(c.min_round_trip_seconds)+'</b> fastest reply</p>':''}
+
+/* Page filter chips -> checklist engine inputs (data/checklist_triage.json).
+   Nothing here asks for a reading the wearables already measure. */
+function toBackend(){
+  var f=S.f,sy={},sg={};
+  function has(g,v){return f[g].indexOf(v)>-1} function area(a){return has('area',a)}
+  if(has('state','unc'))sg.unresponsive=1;
+  if(has('sign','nobreath'))sg.not_breathing=1;
+  if(has('sign','nopulse'))sg.no_pulse=1;
+  if(has('sign','choking'))sg.choking=1;
+  if(has('sign','wheeze')||has('sign','sob'))sy.shortness_breath=1;
+  if(has('sign','bleed'))sg.heavy_bleeding=1;
+  if(has('sign','burn'))sg.major_burn=1;
+  if(has('sign','rash')){if(has('cause','allergen'))sg.allergic_swelling=1;else sy.skin_rash_burn=1}
+  if(has('sign','pale'))sg.pale_sweaty=1;
+  if(has('sign','seizure'))sg.seizing=1;
+  if(has('sign','confused'))sg.confused_drowsy=1;
+  if(has('sign','vomit'))sy.nausea_vomiting=1;
+  if(has('sign','pain')){if(area('chest'))sy.chest_pain=1;if(area('abdomen'))sy.abdominal_pain=1;if(area('head'))sy.headache_dizziness=1;if(area('eyes'))sg.red_sore_eye=1;if(area('airway'))sg.sore_throat=1}
+  if(has('sign','object')){if(area('eyes'))sg.object_in_eye=1;if(area('chest'))sg.chest_injury=1;if(area('abdomen'))sg.abdominal_injury=1;if(!area('eyes')&&!area('chest')&&!area('abdomen'))sg.deep_cut=1}
+  if(has('cause','impact')){if(area('head'))sg.head_neck_injury=1;if(area('chest'))sg.chest_injury=1;if(area('abdomen'))sg.abdominal_injury=1}
+  if(has('cause','chemical')){if(area('eyes'))sg.chemical_in_eye=1;if(area('skin'))sg.chemical_on_skin=1;if(area('airway'))sg.smoke_or_fumes_inhaled=1}
+  if(has('cause','fire')&&area('airway'))sg.smoke_or_fumes_inhaled=1;
+  if(has('cause','allergen')&&!has('sign','rash')&&!sy.shortness_breath)sg.hives_itching=1;
+  S.r.forEach(function(k){var x=k.split(':');(x[0]==='sym'?sy:sg)[x[1]]=1});
+  return {symptoms:Object.keys(sy),signs:Object.keys(sg)}}
+/* Engine inputs the chips above already reach; the rest get their own chips. */
+var COVERED={unresponsive:1,not_breathing:1,no_pulse:1,choking:1,heavy_bleeding:1,major_burn:1,allergic_swelling:1,pale_sweaty:1,seizing:1,confused_drowsy:1,object_in_eye:1,chest_injury:1,abdominal_injury:1,head_neck_injury:1,chemical_in_eye:1,chemical_on_skin:1,smoke_or_fumes_inhaled:1,
+  shortness_breath:1,skin_rash_burn:1,nausea_vomiting:1,chest_pain:1,abdominal_pain:1,headache_dizziness:1};
+function extraGroupsHtml(){var d=LIVE.inputs;if(!d)return '';
+  var rep=d.symptoms.filter(function(x){return !COVERED[x.id]}).map(function(x){return['sym',x]}).concat(d.signs.filter(function(x){return x.kind==='report'&&!COVERED[x.id]}).map(function(x){return['sign',x]}));
+  var obs=d.signs.filter(function(x){return x.kind!=='report'&&!COVERED[x.id]}).map(function(x){return['sign',x]});
+  return [['What else do they report?',rep],['What else do you see?',obs]].map(function(g){
+    return '<div class="fgroup"><span class="lbl">'+g[0]+'</span><div class="chips">'+g[1].map(function(o){var v=o[0]+':'+o[1].id,on=S.r.indexOf(v)>-1;
+      return '<button class="chip b" data-a="rchip" data-v="'+v+'" aria-pressed="'+on+'"'+(o[1].prompt?' title="'+esc(o[1].prompt)+'"':'')+'>'+esc(o[1].label)+'</button>'}).join('')+'</div></div>'}).join('')}
+
+var TIER_TXT={emergency:'ACT NOW',urgent:'WITHIN MINUTES',routine:'ROUTINE'};
+/* The page's 13 step-by-step emergencies (E, in order) as checklist section ids. */
+var SEC=['breathing_difficulty','choking_conscious','choking_unconscious','cpr','abdominal_injury','allergic_severe','burns_major','chest_injury','chest_pain','eye_penetrating','head_neck_injury','seizures','shock'];
+var SHOW_TOP=3;
+function crewInputs(){var b=toBackend();return b.symptoms.length+b.signs.length>0}
+/* Procedures come back from the engine already ranked: urgency tier first
+   (act now > within minutes > routine), then the procedure that a rule names
+   first, then airway > breathing > circulation > the rest. */
+function checklistHtml(){var d=LIVE.match;if(!d||!d.matches||!d.matches.length)return '';
+  var list=S.clAll?d.matches:d.matches.slice(0,SHOW_TOP),more=d.matches.length-SHOW_TOP;
+  return '<section class="cl '+d.tier+'" aria-label="Medical Checklist procedures, most urgent first"><div class="cl-h"><span class="lbl">'+(crewInputs()?'Do these in order':'Live vitals suggest')+'</span>'+
+    (d.comms.round_trip_min?'<small>Surgeon reply takes at least '+d.comms.round_trip_min+' min. Do every other step without waiting.</small>':'')+'</div><ol class="cl-list">'+
+    list.map(function(m,k){var card=SEC.indexOf(m.id);
+      return '<li class="cli '+m.tier+(k===0?' top':'')+'"><span class="cln" aria-hidden="true">'+(k+1)+'</span><span class="clt"><b>'+esc(m.title)+'</b><em>'+(k===0?'<i>START HERE</i> · ':'')+TIER_TXT[m.tier]+' · P. '+esc(m.pages)+(m.surgeon_approval_meds.length?' · * SURGEON FIRST':'')+'</em>'+
+        '<small>'+esc(m.reasons[0]||'')+'</small></span><span class="cla">'+(card>-1?'<button class="b" data-a="open" data-i="'+card+'">Steps</button>':'')+
+        '<a class="b" href="'+API+m.pdf_url+'" target="_blank" rel="noopener" aria-label="Open checklist PDF: '+esc(m.title)+'">PDF</a></span></li>'}).join('')+'</ol>'+
+    (more>0?'<button class="ghost sm b lbl clmore" data-a="clmore">'+(S.clAll?'Show top '+SHOW_TOP+' only':'Show '+more+' more')+'</button>':'')+'</section>'}
+/* With crew inputs, the cards follow the engine: only matched procedures,
+   in its order. Without them, the page's own browse filter applies. */
+function rankedCards(){if(!crewInputs())return null;var d=LIVE.match,out=[];
+  if(d&&d.matches)d.matches.forEach(function(m){var i=SEC.indexOf(m.id);if(i>-1&&matches(i,{}))out.push(i)});return out}
+function drawChecklist(){
+  var d=LIVE.match,key=(S.clAll?'all|':'')+(crewInputs()?'in|':'')+(d&&d.matches?d.matches.map(function(m){return m.id+':'+m.tier+':'+m.reasons[0]}).join(','):'');
+  if(key===LIVE.shown)return;LIVE.shown=key;
+  var el=document.getElementById('cl');if(el)el.innerHTML=checklistHtml();
+  var r=document.getElementById('res');if(r)r.innerHTML=cardsHtml();
+  var fc=document.getElementById('fcount');if(fc)fc.textContent=countText()}
+function requestMatch(){
+  var b=toBackend(),P=CREW[S.person],live=online(S.person),seq=++LIVE.seq;
+  if(!P||(!b.symptoms.length&&!b.signs.length&&!live)){LIVE.match=null;drawChecklist();return}
+  fetch(API+'/api/checklist/match',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({crew:P.id,symptoms:b.symptoms,signs:b.signs,use_live_vitals:live})})
+   .then(function(r){return r.json()}).then(function(d){if(seq!==LIVE.seq)return;LIVE.match=d.matches?d:null;drawChecklist()})
+   .catch(function(){if(seq===LIVE.seq){LIVE.match=null;drawChecklist()}})}
+function poll(){
+  fetch(API+'/api/lifeline/live').then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){
+    LIVE.err='';LIVE.comms=d.comms;
+    CREW=d.crew.map(function(c){return{id:c.id,role:c.role,name:c.name}});
+    d.crew.forEach(function(c){var R=LIVE.crew[c.id]=LIVE.crew[c.id]||{hist:{},simT:null},t=c.telemetry;
+      if(R.simT!==null&&t.sim_time_s!==null&&t.sim_time_s<R.simT)R.hist={};  /* feed was reset */
+      if(t.feed&&t.feed.online&&t.sim_time_s!==R.simT){LIVE_ROWS.forEach(function(r){var x=t.signals[r[1]];if(x&&x.status==='measured'){var h=R.hist[r[1]]=R.hist[r[1]]||[];h.push(x.value);if(h.length>40)h.shift()}})}
+      R.simT=t.sim_time_s;R.t=t});
+    if(!LIVE.picked&&CREW.length){  /* open on the most urgent crewmember */
+      LIVE.picked=true;var best=-1,bi=0;CREW.forEach(function(p,i){var l=liveLevel(i)*2+(p.id===d.default_crew?1:0);if(l>best){best=l;bi=i}});
+      S.person=bi;if(S.open<0)renderMain()}
+    if(S.person>=CREW.length)S.person=0;
+  }).catch(function(){LIVE.err='Console not reachable. Start app.py.'}).then(function(){
+    var ae=document.activeElement,key=ae&&ae.closest&&ae.closest('#left')&&ae.getAttribute('data-a')?'[data-a="'+ae.getAttribute('data-a')+'"]'+(ae.hasAttribute('data-i')?'[data-i="'+ae.getAttribute('data-i')+'"]':''):null;
+    renderLeft();if(key){var el=document.querySelector('#left '+key);if(el)el.focus()}
+    requestMatch()})}
+function loadInputs(){fetch(API+'/api/checklist/inputs').then(function(r){return r.json()}).then(function(d){LIVE.inputs=d;if(S.open<0)refreshList()}).catch(function(){})}
+
+var S={person:0,link:true,q:'',open:-1,fig:null,panel:false,f:{state:[],area:[],sign:[],cause:[]},r:[],clAll:false};
 
 /* ---------- helpers ---------- */
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function md(s){return esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}
 function plain(s){return s.replace(/\*\*/g,'')}
 function pad(n){return(n<10?'0':'')+n}
-function lvl(k,v){var r=RANGE[k];return(v>=r[0][0]&&v<=r[0][1])?0:(v>=r[1][0]&&v<=r[1][1])?1:2}
 var TRI='<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.2v.1"/>';
 function tri(c,label){return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" '+(label?'role="img" aria-label="'+label+'"':'aria-hidden="true"')+'>'+TRI+'</svg>'}
 function art(k,sw){var a=ART[k];sw=sw||1;return '<path d="'+a.mesh+'" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="'+(.7*sw)+'"/><path d="'+a.edge+'" fill="none" stroke="#fff" stroke-opacity=".95" stroke-width="'+(1.1*sw)+'"/><path d="'+a.dots+'" fill="none" stroke="#fff" stroke-width="'+(2.4*sw)+'" stroke-linecap="round"/><path d="'+a.accent+'" fill="none" stroke="#FF4D4D" stroke-width="'+(2.4*sw)+'" stroke-linejoin="round" stroke-linecap="round"/><path d="'+a.hot+'" fill="#FF4D4D"/>'}
@@ -433,19 +572,15 @@ var PIN='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="cur
 var ARROW='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>';
 
 /* ---------- dashboard ---------- */
-function crewHtml(){return CREW.map(function(p,i){var last=p.v[p.v.length-1],w=Math.max.apply(null,last.map(function(v,k){return lvl(k,v)})),sel=i===S.person;
+function crewHtml(){if(!CREW.length)return '<p class="vsrc" style="grid-column:1/-1;font-size:14px;color:var(--orange)">'+esc(LIVE.err||'Waiting for the crew roster…')+'</p>';
+  return CREW.map(function(p,i){var w=liveLevel(i),sel=i===S.person;
   return '<button class="cb b '+LVN[w]+'" data-a="person" data-i="'+i+'" aria-pressed="'+sel+'" aria-label="'+p.role+' '+p.name+(w===2?', vitals critical':w===1?', vitals out of range':'')+'">'+
    '<svg width="26" height="44" viewBox="0 0 26 44" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13" cy="6" r="4"/><path d="M13 11v15M13 14L4 24M13 14l9 10M13 26L7 42M13 26l6 16"/></svg>'+
    '<span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span class="n">'+pad(i+1)+(w?tri(sel?(w===2?'#C01818':'#A85400'):LVC[w]):'')+'</span><span class="r">'+p.role+'</span><span class="nm">'+p.name+'</span></span></button>'}).join('')}
 function linkHtml(){return S.link?
   '<svg width="150" height="56" viewBox="0 0 150 56" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none"><path d="M5 28l13-8v16z"/><path class="flow" d="M26 28H106" stroke="#3DDC84" stroke-width="1.8" stroke-dasharray="4 6"/><circle class="ping" cx="126" cy="28" r="14" stroke="#3DDC84"/><circle cx="126" cy="28" r="14"/><ellipse cx="126" cy="28" rx="6" ry="14"/><path d="M112 28h28"/></svg><span class="st" style="color:var(--green)">CONNECTED</span>':
   '<svg width="150" height="56" viewBox="0 0 150 56" fill="none" stroke="#8A8A8A" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none"><path d="M5 28l13-8v16z" stroke="#fff"/><path d="M26 28H52M80 28H106" stroke-dasharray="2 6"/><path class="blink" d="M59 21l14 14M73 21L59 35" stroke="#FF4D4D" stroke-width="2.2"/><circle cx="126" cy="28" r="14"/><ellipse cx="126" cy="28" rx="6" ry="14"/><path d="M112 28h28"/></svg><span class="st" style="color:var(--red)">NOT CONNECTED</span>'}
-function vitalsHtml(){var P=CREW[S.person],L=P.v[P.v.length-1];
-  var rows=[['Heart rate',L[0],'bpm',lvl(0,L[0]),0],['Blood pressure',L[1]+'/'+L[2],'mmHg',Math.max(lvl(1,L[1]),lvl(2,L[2])),1],['Resp. rate',L[3],'/min',lvl(3,L[3]),3],['SpO₂',L[5],'%',lvl(5,L[5]),5],['Temp',L[4].toFixed(1),'°C',lvl(4,L[4]),4]];
-  return rows.map(function(r){var s=P.v.map(function(x){return x[r[4]]}),mn=Math.min.apply(null,s),mx=Math.max.apply(null,s);
-    var pts=s.map(function(v,i){return[4+i*92/(s.length-1),mx===mn?16:27-(v-mn)/(mx-mn)*22]}),e=pts[pts.length-1],c=LVC[r[3]];
-    return '<div class="vrow"><div class="l"><span class="k lbl">'+r[0]+(r[3]?tri(c,r[3]===2?'Critical':'Out of range'):'')+'</span><span style="white-space:nowrap"><span class="v" style="color:'+c+'">'+r[1]+'</span><span class="u">'+r[2]+'</span></span></div>'+
-     '<svg width="100" height="32" viewBox="0 0 100 32" aria-hidden="true" style="flex:none"><polyline points="'+pts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1)}).join(' ')+'" fill="none" stroke="'+c+'" stroke-width="1.5" stroke-linejoin="round"/><circle cx="'+e[0]+'" cy="'+e[1]+'" r="2.8" fill="'+c+'"/></svg></div>'}).join('')}
+function vitalsHtml(){return liveVitalsHtml()}
 /* ---------- search filters ---------- */
 var FG = [
  {k:'state', t:'Is the person awake?', o:[['con','Conscious'],['unc','Unconscious']]},
@@ -472,7 +607,7 @@ TAGS.forEach(function(t){for(var k in t)t[k]=t[k].split(' ')});
 
 function hay(e){return(e.t+' '+e.items.map(function(i){return(i.t||i.if||i.sub||i.note||i.warn||'')+' '+(i.loc||[]).map(function(k){return L[k].join(' ')}).join(' ')+' '+(i.dose||[]).join(' ')}).join(' ')).toLowerCase().replace(/\*\*/g,'')}
 E.forEach(function(e){e.hay=hay(e)});
-function nActive(){var n=0;for(var k in S.f)n+=S.f[k].length;return n}
+function nActive(){var n=0;for(var k in S.f)n+=S.f[k].length;return n+S.r.length}
 function matches(i,f){
   var e=E[i],w=S.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if(!w.every(function(q){return e.hay.indexOf(q)>-1}))return false;
@@ -484,25 +619,26 @@ function filtersHtml(){
   var h='<div class="fpanel">';
   FG.forEach(function(g){
     h+='<div class="fgroup"><span class="lbl">'+g.t+'</span><div class="chips">'+g.o.map(function(o){
-      var on=S.f[g.k].indexOf(o[0])>-1,trial={};for(var k in S.f)trial[k]=S.f[k].slice();
-      if(!on)trial[g.k]=trial[g.k].concat([o[0]]);
-      var n=0;E.forEach(function(e,i){if(matches(i,trial))n++});
-      return '<button class="chip b" data-a="chip" data-g="'+g.k+'" data-v="'+o[0]+'" aria-pressed="'+on+'"'+(!on&&!n?' disabled':'')+'>'+o[1]+'<em>'+n+'</em></button>'}).join('')+'</div></div>'});
-  return h+'<div class="fbar"><span>'+hits().length+' OF 13 MATCH</span><span style="display:flex;gap:8px">'+(nActive()?'<button class="ghost sm b lbl" data-a="reset">Clear filters</button>':'')+'<button class="ghost sm b lbl" data-a="hide" style="background:#fff;color:#000;border-color:#fff">Show '+hits().length+(hits().length===1?' result':' results')+'</button></span></div></div>'}
+      var on=S.f[g.k].indexOf(o[0])>-1;
+      return '<button class="chip b" data-a="chip" data-g="'+g.k+'" data-v="'+o[0]+'" aria-pressed="'+on+'">'+o[1]+'</button>'}).join('')+'</div></div>'});
+  h+=extraGroupsHtml();
+  return h+'<div class="fbar"><span id="fcount">'+countText()+'</span><span style="display:flex;gap:8px">'+(nActive()?'<button class="ghost sm b lbl" data-a="reset">Clear filters</button>':'')+'<button class="ghost sm b lbl" data-a="hide" style="background:#fff;color:#000;border-color:#fff">Show results</button></span></div></div>'}
+function countText(){if(!crewInputs())return hits().length+' OF 13 MATCH';var d=LIVE.match,n=d&&d.matches?d.matches.length:0;return n+(n===1?' CHECKLIST PROCEDURE':' CHECKLIST PROCEDURES')}
 function cardsHtml(){
-  var list=hits();
+  var ranked=rankedCards(),list=ranked||hits();
+  if(ranked&&!list.length)return LIVE.match&&LIVE.match.matches.length?'':'<div class="empty"><p style="font-size:20px;font-weight:300">No checklist procedure matches these yet.</p><p style="color:var(--muted)">Add what you see or what they report. Record vitals for the surgeon.</p><button class="ghost b lbl" data-a="reset">Clear filters</button></div>';
   if(!list.length)return '<div class="empty"><p style="font-size:20px;font-weight:300">No emergency matches.</p><button class="ghost b lbl" data-a="reset">Clear search and filters</button></div>';
-  return '<div class="grid'+(S.panel?' compact':'')+'">'+list.map(function(i){var e=E[i];return '<button class="card b" data-a="open" data-i="'+i+'" aria-label="'+esc(e.t)+', '+e.steps+' steps"><span>'+
-   '<span class="hd"><span>'+pad(i+1)+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9A9A" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></span>'+
+  return '<div class="grid'+(S.panel?' compact':'')+'">'+list.map(function(i,k){var e=E[i];return '<button class="card b" data-a="open" data-i="'+i+'" aria-label="'+esc(e.t)+', '+e.steps+' steps"><span>'+
+   '<span class="hd"><span>'+(ranked?'#'+(k+1):pad(i+1))+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9A9A" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></span>'+
    '<svg class="art" viewBox="0 0 240 170" aria-hidden="true">'+art(e.art)+'</svg><span class="t">'+esc(e.t)+'</span><span class="m">'+e.steps+' STEPS</span></span></button>'}).join('')+'</div>'}
 function listHtml(){
   var P=CREW[S.person],n=nActive();
-  return '<div class="sec"><h2 class="lbl">What is happening?</h2><span class="aside">PATIENT <b>'+P.role+' · '+P.name+'</b></span></div>'+
+  return '<div class="sec"><h2 class="lbl">What is happening?</h2><span class="aside">PATIENT <b>'+(P?P.role+' · '+P.name:'—')+'</b></span></div>'+
    '<div class="search"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9A9A9A" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'+
    '<input id="q" type="search" autocomplete="off" placeholder="Search, or tap here to filter by what you see" aria-label="Search emergencies" value="'+esc(S.q)+'">'+
    '<button class="ftoggle b lbl" data-a="toggle" aria-expanded="'+S.panel+'">Filters'+(n?' · '+n:'')+'</button></div>'+
-   '<div id="filters">'+filtersHtml()+'</div><div id="res" style="flex:1;display:flex;flex-direction:column">'+cardsHtml()+'</div>'}
-function refreshList(){document.getElementById('filters').innerHTML=filtersHtml();document.getElementById('res').innerHTML=cardsHtml();
+   '<div id="filters">'+filtersHtml()+'</div><div id="cl">'+checklistHtml()+'</div><div id="res" style="flex:1;display:flex;flex-direction:column">'+cardsHtml()+'</div>'}
+function refreshList(){LIVE.shown='';document.getElementById('filters').innerHTML=filtersHtml();document.getElementById('res').innerHTML=cardsHtml();var cl=document.getElementById('cl');if(cl)cl.innerHTML=checklistHtml();
   var t=document.querySelector('[data-a=toggle]'),n=nActive();if(t){t.textContent='Filters'+(n?' · '+n:'');t.setAttribute('aria-expanded',S.panel)}}
 
 /* ---------- protocol (inside the right panel) ---------- */
@@ -544,17 +680,19 @@ function protoHtml(){
 var view=document.getElementById('view');
 function renderLeft(){var P=CREW[S.person];document.getElementById('left').innerHTML=
    '<section><div class="sec"><h2 class="lbl">Choose person</h2></div><div class="crew">'+crewHtml()+'</div></section>'+
-   '<section><div class="sec"><h2 class="lbl">Earth link</h2></div><button class="link b" data-a="link" aria-label="Earth link: '+(S.link?'connected':'not connected')+'. Tap to switch the demo state.">'+linkHtml()+'</button></section>'+
-   '<section class="vit"><div class="sec"><h2 class="lbl">Vitals · '+P.role+'</h2></div><div style="flex:1;display:flex;flex-direction:column">'+vitalsHtml()+'</div></section>'}
+   '<section><div class="sec"><h2 class="lbl">Earth link</h2></div><button class="link b" data-a="link" aria-label="Earth link: '+(S.link?'connected':'not connected')+'. Tap to switch the demo state.">'+linkHtml()+'</button>'+(S.link?delayHtml():'')+'</section>'+
+   '<section class="vit"><div class="sec"><h2 class="lbl">Vitals'+(P?' · '+P.role:'')+'</h2></div><div style="flex:1;display:flex;flex-direction:column">'+vitalsHtml()+'</div></section>'}
 function renderMain(){document.getElementById('main').innerHTML=S.open<0?listHtml():protoHtml()}
 view.innerHTML='<div class="home"><aside class="left" id="left"></aside><main class="main" id="main"></main></div>';
 function render(){renderLeft();renderMain()}
 document.addEventListener('click',function(ev){
   var el=ev.target.closest('[data-a]');if(!el)return;var a=el.getAttribute('data-a'),i=+el.getAttribute('data-i');
-  if(a==='person'||a==='link'){if(a==='person')S.person=i;else S.link=!S.link;renderLeft();if(S.open<0){var as=document.querySelector('.sec .aside');if(as){var P=CREW[S.person];as.innerHTML='PATIENT <b>'+P.role+' · '+P.name+'</b>'}}return}
-  if(a==='chip'){var g=el.getAttribute('data-g'),v=el.getAttribute('data-v'),x=S.f[g].indexOf(v);if(x>-1)S.f[g].splice(x,1);else S.f[g].push(v);refreshList();return}
-  if(a==='reset'){S.q='';for(var k in S.f)S.f[k]=[];var q=document.getElementById('q');if(q)q.value='';refreshList();return}
+  if(a==='person'||a==='link'){if(a==='person'){S.person=i;LIVE.match=null;LIVE.shown='';requestMatch()}else S.link=!S.link;renderLeft();if(S.open<0){var as=document.querySelector('.sec .aside');if(as){var P=CREW[S.person];as.innerHTML='PATIENT <b>'+P.role+' · '+P.name+'</b>'}}return}
+  if(a==='chip'){var g=el.getAttribute('data-g'),v=el.getAttribute('data-v'),x=S.f[g].indexOf(v);if(x>-1)S.f[g].splice(x,1);else S.f[g].push(v);refreshList();requestMatch();return}
+  if(a==='rchip'){var rv=el.getAttribute('data-v'),rx=S.r.indexOf(rv);if(rx>-1)S.r.splice(rx,1);else S.r.push(rv);refreshList();requestMatch();return}
+  if(a==='reset'){S.q='';for(var k in S.f)S.f[k]=[];S.r=[];requestMatch();var q=document.getElementById('q');if(q)q.value='';refreshList();return}
   if(a==='hide'){S.panel=false;refreshList();return}
+  if(a==='clmore'){S.clAll=!S.clAll;drawChecklist();return}
   if(a==='toggle'){S.panel=!S.panel;refreshList();return}
   if(a==='open'){S.open=i;S.fig=null;renderMain();window.scrollTo(0,0);return}
   if(a==='back'){S.open=-1;renderMain();return}
@@ -568,6 +706,7 @@ var T0=Date.now(),BASE=((41*24+7)*3600+22*60+15);
 setInterval(function(){var s=BASE+Math.floor((Date.now()-T0)/1000),d=Math.floor(s/86400);s-=d*86400;var h=Math.floor(s/3600);s-=h*3600;var m=Math.floor(s/60);s-=m*60;
   document.getElementById('met').textContent=('00'+d).slice(-3)+':'+pad(h)+':'+pad(m)+':'+pad(s)},1000);
 render();
+loadInputs();poll();setInterval(poll,2000);
 })();
 </script>
 </body>
